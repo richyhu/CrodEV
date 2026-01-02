@@ -5,7 +5,7 @@
 <img src="https://asperai.rth3.xyz/mingcute_ai-line.png" alt="CrodEV Logo" width="100">
 
 **🎯 简洁、智能、高效的AI聊天助手**
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/richyhu/CrodEV)
 [![GitHub stars](https://img.shields.io/github/stars/richyhu/CrodEV?style=for-the-badge)](https://github.com/richyhu/CrodEV/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/richyhu/CrodEV?style=for-the-badge)](https://github.com/richyhu/CrodEV/network)
 [![GitHub issues](https://img.shields.io/github/issues/richyhu/CrodEV?style=for-the-badge)](https://github.com/richyhu/CrodEV/issues)
