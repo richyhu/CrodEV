@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![CrodEV Logo](https://asperai.rth3.xyz/mingcute_ai-line.png)
+<img src="https://asperai.rth3.xyz/mingcute_ai-line.png" alt="CrodEV Logo" width="100">
 
 **🎯 简洁、智能、高效的AI聊天助手**
 
