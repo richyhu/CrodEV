@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrodEV - 智能聊天助手</title>
+    
+    <!-- 字体和图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js"></script>
+
+    <!-- highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+    <style>
+        /* ==================== 基础和布局 ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0F0F0F;
+            color: #ECECEC;
+            overflow: hidden; /* 防止页面滚动 */
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2A2A2A;
+            border-radius: 3px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+
+        /* 整体布局 */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: #1A1A1A;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-left: 280px;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.visible {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        /* ==================== 组件样式 ==================== */
+
+        /* 顶部栏 */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(15, 15, 15, 0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #2A2A2A;
+        }
+
+        .header-content {
+            max-width: 768px;
+            margin: 0 auto;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 聊天区域 */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 16px;
+        }
+
+        .chat-content {
+            max-width: 768px;
+            margin: 0 auto;
+        }
+
+        /* 输入区域 */
+        .input-area {
+            position: sticky;
+            bottom: 0;
+            padding: 16px;
+            background: #0F0F0F;
+            border-top: 1px solid #2A2A2A;
+        }
+
+        .input-wrapper {
+            max-width: 768px;
+            margin: 0 auto;
+            background: #1A1A1A;
+            border: 1px solid #2A2A2A;
+            border-radius: 12px;
+            padding: 8px;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        
+        .input-wrapper:focus-within {
+            border-color: #4A9EFF;
+        }
+
+        textarea.chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            color: #ECECEC;
+            font-size: 14px;
+            max-height: 128px;
+            padding: 8px;
+            font-family: inherit;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s ease;
+        }
+        
+        .btn.btn-icon {
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: #4A9EFF;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #6BB0FF;
+        }
+        
+        .btn-secondary {
+            background: #262626;
+            color: #ECECEC;
+        }
+        
+        .btn-secondary:hover {
+            background: #333;
+        }
+
+        /* 侧边栏 */
+        .sidebar-header, .sidebar-footer {
+            padding: 16px;
+        }
+        
+        .sidebar-footer {
+            border-top: 1px solid #2A2A2A;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #4A9EFF, #9D7FF5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .history-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px;
+        }
+        
+        .history-title {
+            font-size: 12px;
+            color: #8E8E8E;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #B4B4B4;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .history-item:hover {
+            background: #262626;
+            color: #ECECEC;
+        }
+        
+        .history-item.active {
+            background: #262626;
+            color: #ECECEC;
+        }
+        
+        .history-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .user-menu:hover {
+            background: #262626;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+        }
+        
+        .avatar-user {
+            background: linear-gradient(135deg, #4A9EFF, #9D7FF5);
+            color: white;
+        }
+        
+        .user-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        /* 欢迎界面 */
+        .welcome-screen {
+            text-align: center;
+        }
+        
+        .welcome-icon {
+            display: inline-flex;
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #4A9EFF, #9D7FF5);
+            border-radius: 16px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .welcome-subtitle {
+            color: #B4B4B4;
+            margin-bottom: 32px;
+        }
+        
+        .prompt-card {
+            background: #1A1A1A;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            text-align: left;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .prompt-card:hover {
+            background: #262626;
+        }
+
+        .prompt-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* 消息 */
+        .message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-content {
+            background: #262626;
+            border-top-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: transparent;
+            border-top-left-radius: 4px;
+        }
+
+        /* Markdown */
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            margin: 20px 0 12px;
+            font-weight: 600;
+        }
+        .markdown-content p {
+            margin-bottom: 12px;
+        }
+        .markdown-content pre {
+            background: #0A0A0A;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        .markdown-content code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+        }
+        .markdown-content p > code {
+            background: #262626;
+            color: #8AB4F8;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            background: #262626;
+            color: #B4B4B4;
+            border: 1px solid #333;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+        }
+        .markdown-content pre:hover .copy-btn {
+            opacity: 1;
+        }
+        .markdown-content ul, .markdown-content ol {
+            padding-left: 24px;
+            margin: 12px 0;
+        }
+        .markdown-content blockquote {
+            border-left: 3px solid #4A9EFF;
+            padding-left: 16px;
+            margin: 16px 0;
+            color: #B4B4B4;
+        }
+        
+        /* Loading */
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+            padding: 8px;
+        }
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background: #8E8E8E;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+
+        /* 模态框 */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-content {
+            background: #1A1A1A;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 420px;
+            width: 100%;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #B4B4B4;
+            margin-bottom: 8px;
+        }
+        
+        .input {
+            width: 100%;
+            background: #0F0F0F;
+            border: 1px solid #2A2A2A;
+            border-radius: 8px;
+            padding: 12px;
+            color: #ECECEC;
+        }
+        
+        .input:focus {
+            outline: none;
+            border-color: #4A9EFF;
+        }
+        
+        select.input {
+             appearance: none;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 侧边栏遮罩 -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+        <!-- 侧边栏 -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon"><i class="fas fa-robot"></i></div>
+                    <span class="logo-text">CrodEV</span>
+                </div>
+            </div>
+
+            <div style="padding: 0 16px; margin-bottom: 16px;">
+                <button id="newChatBtn" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-plus" style="margin-right: 8px;"></i>新建对话
+                </button>
+            </div>
+
+            <div class="history-container">
+                <div class="history-title">历史记录</div>
+                <div id="historyList"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="userMenuBtn" class="user-menu">
+                    <div class="avatar avatar-user"><i class="fas fa-user"></i></div>
+                    <div class="user-info">
+                        <div id="usernameDisplay">用户</div>
+                    </div>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main id="mainContent" class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <button id="toggleSidebarBtn" class="btn btn-icon btn-secondary">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <select id="modelSelect" class="input" style="width: auto;">
+                        <option value="qwen3-8b">Qwen3-8B</option>
+                        <option value="deepseek-chat">DeepSeek Chat</option>
+                    </select>
+                    <button id="apiSettingsBtn" class="btn btn-icon btn-secondary">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="chatContainer" class="chat-container">
+                <div class="chat-content">
+                    <div id="welcomeScreen" class="welcome-screen">
+                        <div class="welcome-icon"><i class="fas fa-sparkles" style="font-size: 28px; color: white;"></i></div>
+                        <h1 class="welcome-title">你好，我是 CrodEV</h1>
+                        <p class="welcome-subtitle">我可以帮你解答问题、编写代码、创意写作等</p>
+                        
+                        <div class="prompt-card" data-prompt="帮我写一个 Python 快速排序算法">
+                            <div class="prompt-icon" style="background: rgba(74, 158, 255, 0.1);"><i class="fas fa-code" style="color: #4A9EFF;"></i></div>
+                            <div>
+                                <div style="font-weight: 500;">编写代码</div>
+                                <div style="font-size: 14px; color: #B4B4B4;">帮我写一个 Python 快速排序算法</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="messagesList"></div>
+
+                    <div id="loadingIndicator" class="hidden message assistant">
+                        <div class="avatar" style="background: linear-gradient(135deg, #4A9EFF, #9D7FF5);"><i class="fas fa-robot"></i></div>
+                        <div class="message-content">
+                            <div class="loading-dots">
+                                <div class="loading-dot"></div>
+                                <div class="loading-dot"></div>
+                                <div class="loading-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="userInput" placeholder="输入消息..." rows="1" class="chat-input"></textarea>
+                    <button id="sendBtn" class="btn btn-primary btn-icon"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="apiModal" class="modal hidden">
+        <div class="modal-content">
+             <h2 class="modal-header">API 设置</h2>
+             <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input type="password" id="apiKeyInput" class="input">
+             </div>
+             <button id="saveApiKeyBtn" class="btn btn-primary" style="width: 100%;">保存</button>
+        </div>
+    </div>
+    
+    <script>
+        // JavaScript 逻辑和之前的版本相同，这里省略以保持简洁。
+        // 请将上一个版本中的 <script> 标签内容完整复制到这里。
+        // ... (此处应填入上一个版本提供的完整 JavaScript 代码)
+        
+        // ==================== 确保 DOM 元素引用正确 ====================
+        const el_new = {
+            sidebar: document.getElementById('sidebar'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
+            mainContent: document.getElementById('mainContent'),
+            toggleSidebarBtn: document.getElementById('toggleSidebarBtn'),
+            historyList: document.getElementById('historyList'),
+            newChatBtn: document.getElementById('newChatBtn'),
+            userMenuBtn: document.getElementById('userMenuBtn'),
+            usernameDisplay: document.getElementById('usernameDisplay'),
+            welcomeScreen: document.getElementById('welcomeScreen'),
+            messagesList: document.getElementById('messagesList'),
+            loadingIndicator: document.getElementById('loadingIndicator'),
+            userInput: document.getElementById('userInput'),
+            sendBtn: document.getElementById('sendBtn'),
+            modelSelect: document.getElementById('modelSelect'),
+            apiModal: document.getElementById('apiModal'),
+            apiKeyInput: document.getElementById('apiKeyInput'),
+            saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
+            apiSettingsBtn: document.getElementById('apiSettingsBtn'),
+            chatContainer: document.getElementById('chatContainer')
+        };
+        
+        // (将上一个版本的 JS 逻辑粘贴在此处，并用 el_new 替换旧的 el 引用)
+        
+        // 示例：更新的侧边栏逻辑
+        el_new.toggleSidebarBtn.addEventListener('click', () => {
+            el_new.sidebar.classList.toggle('collapsed');
+            el_new.mainContent.classList.toggle('expanded');
+            el_new.sidebarOverlay.classList.toggle('active');
+        });
+        
+        el_new.sidebarOverlay.addEventListener('click', () => {
+            el_new.sidebar.classList.add('collapsed');
+            el_new.mainContent.classList.add('expanded');
+            el_new.sidebarOverlay.classList.remove('active');
+        });
+
+        // (其他 JS 逻辑...)
+    </script>
+</body>
+</html>

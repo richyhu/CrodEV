@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amacis AI</title>
+	<link rel="icon" href="mingcute_ai-line.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#4CAF50',
+                        dark: '#1A1A1A',
+                        darker: '#121212',
+                        light: '#E0E0E0',
+                        'dark-card': 'rgba(255, 255, 255, 0.05)',
+                        'dark-card-hover': 'rgba(255, 255, 255, 0.08)'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'typing': 'typing 1.4s infinite',
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'gradient-flow': 'gradientFlow 8s infinite linear'
+                    },
+                    keyframes: {
+                        typing: {
+                            '0%, 80%, 100%': { transform: 'translateY(0)' },
+                            '40%': { transform: 'translateY(-10px)' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        gradientFlow: {
+                            '0%': { transform: 'rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .backdrop-blur-xl {
+                backdrop-filter: blur(20px);
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .bg-gradient-primary {
+                background: linear-gradient(135deg, #165DFF 0%, #0E42B3 100%);
+            }
+            .bg-gradient-secondary {
+                background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            }
+            .bg-gradient-dark {
+                background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+            }
+            .border-glow {
+                box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+            }
+            .typing-dot {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                margin: 0 2px;
+                background-color: #fff;
+                border-radius: 50%;
+                animation: typing 1.4s infinite;
+            }
+            .typing-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .typing-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            .tooltip {
+                position: relative;
+            }
+            .tooltip-text {
+                visibility: hidden;
+                opacity: 0;
+                width: 120px;
+                background-color: rgba(0, 0, 0, 0.8);
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: calc(100% + 5px);
+                left: 50%;
+                transform: translateX(-50%);
+                transition: opacity 0.3s;
+                pointer-events: none;
+                white-space: nowrap;
+            }
+            .tooltip:hover .tooltip-text {
+                visibility: visible;
+                opacity: 1;
+            }
+            /* 确保提示框在视口内 */
+            .tooltip-text {
+                max-width: calc(100vw - 40px);
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-dark min-h-screen font-inter text-light overflow-x-hidden">
+    <!-- 背景效果 -->
+    <div class="fixed inset-0 -z-10 overflow-hidden">
+        <div class="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] rounded-full bg-primary/5 blur-[100px] animate-pulse-slow"></div>
+        <div class="absolute bottom-[-200px] right-[-200px] w-[600px] h-[600px] rounded-full bg-secondary/5 blur-[100px] animate-pulse-slow"></div>
+    </div>
+
+    <!-- Cookie 同意弹窗 -->
+    <div id="cookieModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/5 shadow-xl transform transition-transform duration-300 scale-95">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/20 mb-4">
+                    <i class="fa-solid fa-cookie-bite text-primary text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">关于网站使用的Cookie</h3>
+                <p class="text-gray-400 text-sm">我们使用Cookie来提升您的体验并确保网站正常运行。继续使用即表示您同意我们使用Cookie。您可以随时了解更多信息或更改您的设置。</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="acceptCookies" class="bg-gradient-primary hover:bg-primary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 flex-1">
+                    接受
+                </button>
+                <button id="declineCookies" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                    拒绝
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 密码验证弹窗 -->
+    <div id="loginModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/5 shadow-xl transform transition-transform duration-300 scale-95">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary/20 mb-4">
+                    <i class="fa-solid fa-lock text-secondary text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">🔒 内测访问授权</h3>
+                <p class="text-gray-400 text-sm">请输入内测访问密码以继续</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="passwordInput" placeholder="输入访问密码" class="w-full bg-dark-card-hover border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all duration-300">
+                <p id="errorMsg" class="text-red-500 text-sm hidden">✖ 密码错误，请重试</p>
+                <button id="checkPassword" class="bg-gradient-secondary hover:bg-secondary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-secondary/20 w-full">
+                    验证身份
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API设置窗口 -->
+    <div id="apiSettingsModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/5 shadow-xl transform transition-transform duration-300 scale-95">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">API 设置</h3>
+                <button id="closeApiSettings" class="text-gray-400 hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">API Key</label>
+                    <div class="relative">
+                        <input type="text" id="apiKeyInput" placeholder="输入您的API Key" class="w-full bg-dark-card-hover border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all duration-300">
+                        <button id="toggleApiKey" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-300">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button id="saveApiKey" class="bg-gradient-primary hover:bg-primary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 flex-1">
+                        保存
+                    </button>
+                    <button id="resetApiKey" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        恢复默认
+                    </button>
+                </div>
+                <p id="apiKeyStatus" class="text-sm text-gray-400 hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="mainContainer" class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 h-screen flex flex-col opacity-0 pointer-events-none transition-all duration-500">
+        <!-- 顶部导航 -->
+        <header class="mb-6 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center tooltip cursor-pointer" id="avatarTooltip">
+                    <i class="fa-solid fa-robot text-white"></i>
+                    <span class="tooltip-text">内测版本，内测账号</span>
+                </div>
+                <h1 class="text-2xl font-bold text-white">Amacis AI</h1>
+            </div>
+            <div class="hidden sm:flex items-center space-x-3">
+                <button id="helpButton" class="text-gray-400 hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-question-circle"></i>
+                </button>
+                <button id="openApiSettings" class="text-gray-400 hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+                <button class="text-gray-400 hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-user-circle"></i>
+                </button>
+            </div>
+            <button class="md:hidden text-gray-400 hover:text-white transition-colors duration-300">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </header>
+
+        <!-- 聊天区域 -->
+        <div id="chatBox" class="flex-1 overflow-y-auto p-4 mb-6 bg-dark-card rounded-2xl border border-white/5 shadow-lg space-y-4">
+            <!-- 欢迎消息 -->
+            <div class="flex items-start space-x-3 animate-fade-in">
+                <div class="w-8 h-8 rounded-full bg-gradient-secondary flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                </div>
+                <div class="bg-dark-card-hover rounded-xl rounded-tl-none p-3 sm:p-4 max-w-[90%] md:max-w-[80%] border border-white/5 shadow-md">
+                    <p class="text-white">您好！我是Amacis AI，可以和我讨论任何话题～</p>
+                </div>
+            </div>
+
+            <!-- 正在输入提示 -->
+            <div id="typing" class="flex items-start space-x-3 hidden">
+                <div class="w-8 h-8 rounded-full bg-gradient-secondary flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                </div>
+                <div class="bg-dark-card-hover rounded-xl rounded-tl-none p-4 max-w-[80%] border border-white/5 shadow-md">
+                    <div class="flex space-x-1">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="bg-dark-card rounded-2xl border border-white/5 p-2 sm:p-3 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <div class="flex items-center space-x-3">
+                <button class="text-gray-400 hover:text-white p-2 rounded-lg transition-colors duration-300">
+                    <i class="fa-solid fa-paperclip"></i>
+                </button>
+                <input type="text" id="userInput" placeholder="输入您的问题..." class="flex-1 bg-transparent outline-none text-white py-2">
+                <button id="sendMessage" class="bg-gradient-primary hover:bg-primary text-white p-2 rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 默认API Key
+        // 标注：网站默认API Key
+const DEFAULT_API_KEY = 'sk-e345d5497c8643eb861f157be125c2ea';
+        //归属 张琪
+        
+        // 检查Cookie同意状态
+        function checkCookieConsent() {
+            const cookies = document.cookie.split(';');
+            for(let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if(name === 'cookie_consent' && value === 'true') {
+                    // 用户已同意Cookie，检查访问令牌
+                    return true;
+                }
+            }
+            // 用户未同意Cookie，显示Cookie弹窗
+            setTimeout(() => {
+                document.getElementById('cookieModal').classList.remove('opacity-0', 'pointer-events-none');
+                document.getElementById('cookieModal').querySelector('div').classList.remove('scale-95');
+                document.getElementById('cookieModal').querySelector('div').classList.add('scale-100');
+            }, 300);
+            return false;
+        }
+
+        // 接受Cookie
+        function acceptCookies() {
+            const date = new Date();
+            date.setTime(date.getTime() + (365*24*60*60*1000));
+            document.cookie = `cookie_consent=true; expires=${date.toUTCString()}; path=/`;
+            
+            const modal = document.getElementById('cookieModal');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                // 显示主界面
+                document.getElementById('mainContainer').classList.remove('opacity-0', 'pointer-events-none');
+                // 检查访问令牌
+                if(!checkAccessToken()) {
+                    showLoginModal();
+                }
+            }, 300);
+        }
+
+        // 拒绝Cookie
+        function declineCookies() {
+            alert('您已拒绝Cookie，无法继续使用本网站。感谢您的访问！');//密码在下面
+            window.location.href = "about:blank";
+        }
+
+        // 检查访问令牌
+        function checkAccessToken() {
+            const cookies = document.cookie.split(';');
+            for(let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if(name === 'access_token' && value === 'amacis001') {
+                    // 用户已登录
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 显示登录模态框
+        function showLoginModal() {
+            setTimeout(() => {
+                document.getElementById('loginModal').classList.remove('opacity-0', 'pointer-events-none');
+                document.getElementById('loginModal').querySelector('div').classList.remove('scale-95');
+                document.getElementById('loginModal').querySelector('div').classList.add('scale-100');
+            }, 300);
+        }
+
+        // 设置访问令牌
+        function setAccessToken() {
+            const date = new Date();
+            date.setTime(date.getTime() + (2*24*60*60*1000));
+            document.cookie = `access_token=amacis001; expires=${date.toUTCString()}; path=/`;
+        }
+
+        // 验证密码
+        function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if(password === 'amacis001') {
+                setAccessToken();
+                
+                const modal = document.getElementById('loginModal');
+                modal.querySelector('div').classList.remove('scale-100');
+                modal.querySelector('div').classList.add('scale-95');
+                
+                setTimeout(() => {
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                }, 300);
+            } else {
+                errorMsg.classList.remove('hidden');
+                setTimeout(() => errorMsg.classList.add('hidden'), 2000);
+            }
+        }
+
+        // 获取API Key
+        function getApiKey() {
+            const cookies = document.cookie.split(';');
+            for(let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if(name === 'api_key') {
+                    return value;
+                }
+            }
+            return DEFAULT_API_KEY;
+        }
+
+        // 设置API Key
+        function setApiKey(apiKey) {
+            const date = new Date();
+            date.setTime(date.getTime() + (365*24*60*60*1000));
+            document.cookie = `api_key=${apiKey}; expires=${date.toUTCString()}; path=/`;
+        }
+
+        // 显示API设置窗口
+        function openApiSettings() {
+            const apiKey = getApiKey();
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const toggleBtn = document.getElementById('toggleApiKey');
+            
+            // 显示掩码形式的API Key
+            apiKeyInput.value = apiKey.replace(/.(?=.{4})/g, '*');
+            apiKeyInput.setAttribute('type', 'text');
+            toggleBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+            
+            const modal = document.getElementById('apiSettingsModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+        }
+
+        // 关闭API设置窗口
+        function closeApiSettings() {
+            const modal = document.getElementById('apiSettingsModal');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                document.getElementById('apiKeyStatus').classList.add('hidden');
+            }, 300);
+        }
+
+        // 切换API Key可见性
+        function toggleApiKeyVisibility() {
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const toggleBtn = document.getElementById('toggleApiKey');
+            
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+            } else {
+                const currentValue = apiKeyInput.value;
+                if (currentValue === getApiKey()) {
+                    apiKeyInput.value = currentValue.replace(/.(?=.{4})/g, '*');
+                }
+                apiKeyInput.type = 'password';
+                toggleBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+            }
+        }
+
+        // 保存API Key
+        function saveApiKey() {
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const apiKey = apiKeyInput.value.trim();
+            const statusMsg = document.getElementById('apiKeyStatus');
+            
+            if (apiKey) {
+                setApiKey(apiKey);
+                statusMsg.textContent = 'API Key已保存';
+                statusMsg.classList.remove('hidden', 'text-red-500');
+                statusMsg.classList.add('text-green-500');
+                
+                setTimeout(() => {
+                    closeApiSettings();
+                }, 1500);
+            } else {
+                statusMsg.textContent = 'API Key不能为空';
+                statusMsg.classList.remove('hidden', 'text-green-500');
+                statusMsg.classList.add('text-red-500');
+            }
+        }
+
+        // 恢复默认API Key
+        function resetApiKey() {
+            setApiKey(DEFAULT_API_KEY);
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            apiKeyInput.value = DEFAULT_API_KEY.replace(/.(?=.{4})/g, '*');
+            
+            const statusMsg = document.getElementById('apiKeyStatus');
+            statusMsg.textContent = '已恢复默认API Key';
+            statusMsg.classList.remove('hidden', 'text-red-500');
+            statusMsg.classList.add('text-green-500');
+        }
+
+        // 页面加载时检查Cookie同意状态
+        document.addEventListener('DOMContentLoaded', () => {
+            if(checkCookieConsent()) {
+                document.getElementById('mainContainer').classList.remove('opacity-0', 'pointer-events-none');
+                if(!checkAccessToken()) {
+                    showLoginModal();
+                }
+            }
+            
+            // 初始化API设置相关事件
+            document.getElementById('openApiSettings').addEventListener('click', openApiSettings);
+            document.getElementById('closeApiSettings').addEventListener('click', closeApiSettings);
+            document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
+            document.getElementById('saveApiKey').addEventListener('click', saveApiKey);
+            document.getElementById('resetApiKey').addEventListener('click', resetApiKey);
+            
+            // 修复头像提示框位置问题
+            const avatarTooltip = document.getElementById('avatarTooltip');
+            if (avatarTooltip) {
+                const tooltipText = avatarTooltip.querySelector('.tooltip-text');
+                if (tooltipText) {
+                    tooltipText.style.bottom = 'calc(100% + 5px)';
+                    tooltipText.style.left = '50%';
+                    tooltipText.style.transform = 'translateX(-50%)';
+                }
+            }
+            
+            // 绑定帮助按钮点击事件
+            document.getElementById('helpButton').addEventListener('click', () => {
+                window.open('https://qihelp{$rthSuffix}/', '_blank');
+            });
+        });
+
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const typing = document.getElementById('typing');
+        const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        let API_TOKEN = getApiKey();
+
+        function addMessage(text, isUser) { 
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isUser ? 'flex-row-reverse' : 'items-start'} space-x-3 animate-fade-in`;
+            
+            // 头像容器
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = `w-8 h-8 rounded-full ${isUser ? 'bg-gradient-primary' : 'bg-gradient-secondary'} flex items-center justify-center flex-shrink-0`;
+            const avatar = isUser ? 
+                '<div class="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-user text-white text-sm"></i></div>' :
+                '<div class="w-8 h-8 rounded-full bg-gradient-secondary flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-robot text-white text-sm"></i></div>';
+            
+            const bubbleClass = isUser ? 
+                'bg-gradient-primary/20 rounded-xl rounded-tr-none p-4 max-w-[80%] border border-primary/30 shadow-md' :
+                'bg-dark-card-hover rounded-xl rounded-tl-none p-3 sm:p-4 max-w-[90%] md:max-w-[80%] border border-white/5 shadow-md';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `bg-dark-card-hover rounded-xl ${isUser ? 'rounded-tr-none' : 'rounded-tl-none'} p-3 sm:p-4 max-w-[90%] md:max-w-[80%] border border-white/5 shadow-md`;
+            const p = document.createElement('p');
+            p.className = 'text-white';
+            p.innerHTML = marked.parse(text); // 使用marked解析Markdown
+            contentDiv.appendChild(p);
+            messageDiv.appendChild(contentDiv);
+            chatBox.appendChild(messageDiv);
+        }
+
+        function showTyping() {
+            typing.classList.remove('hidden');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function hideTyping() {
+            typing.classList.add('hidden');
+        }
+
+        async function sendMessage() {
+            // 只有在用户已登录的情况下才发送消息
+            if(!checkAccessToken()) {
+                showLoginModal();
+                return;
+            }
+            
+            // 从Cookie获取最新的API Key
+            API_TOKEN = getApiKey();
+            
+            const question = userInput.value.trim();
+            if (!question) return;
+
+            addMessage(question, true);
+            userInput.value = '';
+            showTyping();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-reasoner",
+                        messages: [{
+                            role: 'user',
+                            content: question
+                        }],
+                        temperature: 0.7,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP错误! 状态码: ${response.status}`);
+                
+                const responseData = await response.json();
+                hideTyping();
+                const aiResponse = responseData.choices[0].message.content;
+                addMessage(aiResponse, false);
+            } catch (error) {
+                hideTyping();
+                addMessage(`⚠️ 请求出错：${error.message}`, false);
+                console.error('API请求错误:', error);
+            }
+        }
+
+        // 添加事件监听器
+        document.getElementById('acceptCookies').addEventListener('click', acceptCookies);
+        document.getElementById('declineCookies').addEventListener('click', declineCookies);
+        document.getElementById('checkPassword').addEventListener('click', checkPassword);
+        document.getElementById('sendMessage').addEventListener('click', sendMessage);
+        
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') checkPassword();
+        });
+    </script>
+</body>
+<!-- 将思考模块移至此处 -->
+<style type="text/tailwindcss">
+  @layer components {
+    .process-container {
+      @apply p-5 bg-dark-card rounded-xl my-4 border border-white/10;
+    }
+    .timeline {
+      @apply relative pl-10;
+    }
+  }
+</style>
+</html>
+
+const initWebSocket = () => {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${protocol}//${window.location.host}/reasoning`);
+  
+  ws.onerror = (error) => {
+    console.error('WebSocket Error:', error);
+    showFallbackUI();
+  };
+};
+    

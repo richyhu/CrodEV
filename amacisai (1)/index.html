@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Amacis AI</title>
+    <link rel="icon" href="mingcute_ai-line.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        dark: '#1A1A1A',
+                        darker: '#121212',
+                        light: '#E0E0E0',
+                        'dark-card': 'rgba(255, 255, 255, 0.05)',
+                        'dark-card-hover': 'rgba(255, 255, 255, 0.08)',
+                        'sidebar-bg': '#1E1E2E',
+                        'sidebar-item-hover': 'rgba(255, 255, 255, 0.12)',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .backdrop-blur-sm {
+                backdrop-filter: blur(4px);
+            }
+            .typing-dot {
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                margin: 0 2px;
+                background-color: #165DFF;
+                border-radius: 50%;
+                animation: typing 1.4s infinite ease-in-out both;
+            }
+            .typing-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .typing-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            @keyframes typing {
+                0%, 80%, 100% {
+                    transform: scale(0);
+                }
+                40% {
+                    transform: scale(1);
+                }
+            }
+            .bg-gradient-dark {
+                background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+                background-attachment: fixed;
+            }
+            .bg-gradient-primary {
+                background: linear-gradient(90deg, #165DFF 0%, #4080FF 100%);
+            }
+            .hover-lift {
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .hover-lift:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px -5px rgba(22, 93, 255, 0.1);
+            }
+            .animate-fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            /* 与bg-gradient-dark颜色匹配的毛玻璃效果 */
+            /* 极简风格的统一背景样式 */
+            .glass-effect-dark {
+                background: rgba(15, 23, 42, 0.95); /* 更贴近主背景色 */
+                backdrop-filter: blur(5px); /* 更微妙的模糊效果 */
+                border: 1px solid rgba(255, 255, 255, 0.03); /* 更细微的边框 */
+            }
+            
+            /* 移除明显的色块差异 */
+            #chatBox {
+                background: rgba(15, 23, 42, 0.95); /* 与header和输入区域一致 */
+                border-top: 1px solid rgba(255, 255, 255, 0.03);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            }
+            
+            /* 优化消息气泡样式，使其更加融入整体 */
+            .message-hover {
+                border-radius: 16px;
+            }
+            .message-hover:hover {
+                background-color: rgba(255, 255, 255, 0.03); /* 更淡的悬停效果 */
+                box-shadow: none; /* 移除阴影，减少视觉分割 */
+            }
+        }
+
+        /* 滚动条样式 */
+        .scrollbar-thin {
+            scrollbar-width: thin;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            transition: background 0.2s ease;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* 消息悬停效果 */
+        .message-hover {
+            transition: all 0.3s ease;
+            border-radius: 18px;
+        }
+        .message-hover:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 主题相关样式 - 始终使用深色模式 */
+        body {
+            --bg-primary: #0A0E17;
+            --bg-secondary: #151C2C;
+            --text-primary: #F8FAFC;
+            --text-secondary: #CBD5E1;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(21, 28, 44, 0.9);
+            --card-hover: rgba(21, 28, 44, 1);
+            scroll-behavior: smooth;
+        }
+
+        /* 全局过渡效果 */
+        * {
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* 侧边栏覆盖层样式 */
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 输入框聚焦效果 */
+        input:focus, textarea:focus, select:focus {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.15) !important;
+            border-color: #165DFF !important;
+        }
+
+        /* 按钮交互效果 */
+        button {
+            transition: all 0.25s ease;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        
+        /* 文本渐变效果 */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            background-image: linear-gradient(90deg, #F8FAFC 0%, #CBD5E1 100%);
+        }
+
+        /* 移动端优化样式 */
+        @media (max-width: 767px) {
+            /* 侧边栏默认隐藏，通过JS控制显示 */
+            #sidebar {
+                position: fixed;
+                left: -8rem;
+                top: 0;
+                bottom: 0;
+                transition: left 0.3s ease;
+                z-index: 30;
+                width: 7rem;
+            }
+            #sidebar.active {
+                left: 0;
+            }
+            
+            /* 确保用户菜单在移动端完全可见 */
+            #userMenuTrigger {
+                min-width: 100%;
+                justify-content: center;
+            }
+            
+            #userMenuTrigger .flex-1 {
+                display: none;
+            }
+            
+            /* 聊天区域适配 */
+            #chatBox {
+                padding: 1rem;
+            }
+
+            /* 输入区域适配 */
+            .p-4 {
+                padding: 0.75rem !important;
+            }
+
+            /* 消息气泡适配 */
+            .message-width-adjusted {
+                max-width: 90%;
+            }
+
+            /* 按钮大小适配 */
+            #sendMessage {
+                padding: 0.75rem !important;
+            }
+
+            /* 顶部导航栏适配 */
+            header {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-dark min-h-screen font-inter text-light overflow-hidden">
+    <!-- 背景效果 -->
+    <div class="fixed inset-0 -z-10 bg-dark"></div>
+
+    <!-- Cookie 同意弹窗 -->
+    <div id="cookieModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/10 shadow-xl transform transition-transform duration-300 scale-95">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/20 mb-4">
+                    <i class="fa-solid fa-cookie-bite text-primary text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">关于网站使用的Cookie</h3>
+                <p class="text-gray-400 text-sm">我们使用Cookie来提升您的体验并确保网站正常运行。继续使用即表示您同意我们使用Cookie。</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="acceptCookies" class="bg-gradient-primary hover:bg-primary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 flex-1">
+                    接受
+                </button>
+                <button id="declineCookies" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                    拒绝
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登录/注册模态框 -->
+    <div id="authModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/10 shadow-xl transform transition-transform duration-300 scale-95">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
+                    <i class="fa-solid fa-user-shield text-primary text-2xl"></i>
+                </div>
+                <h3 id="authModalTitle" class="text-xl font-bold mb-2">登录 Amacis AI</h3>
+                <p id="authModalSubtitle" class="text-gray-400 text-sm">请输入您的邮箱和密码以继续</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">邮箱</label>
+                    <input type="email" id="emailInput" placeholder="your@email.com" class="w-full bg-dark-card-hover border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">密码</label>
+                    <div class="relative">
+                        <input type="password" id="passwordInput" placeholder="输入密码" class="w-full bg-dark-card-hover border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300">
+                        <button id="togglePassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-300">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+                <p id="authErrorMsg" class="text-red-500 text-sm hidden">✖ 用户名或密码错误，请重试</p>
+                <button id="submitAuth" class="bg-gradient-primary hover:bg-primary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 w-full">
+                    登录
+                </button>
+                <button id="toggleAuthMode" class="text-primary hover:text-primary/80 text-sm transition-colors duration-300">
+                    还没有账号？立即注册
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API设置窗口 -->
+    <div id="apiSettingsModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/10 shadow-xl transform transition-transform duration-300 scale-95">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">API 设置</h3>
+                <button id="closeApiSettings" class="text-gray-400 hover:text-white transition-colors duration-300">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">选择模型</label>
+                    <select id="apiModelSelect" class="w-full bg-dark-card-hover border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300">
+                        <option value="deepseek-chat">deepseek-chat</option>
+                        <option value="qwen3-8b">Qwen3-8B</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">API Key</label>
+                    <div class="relative">
+                        <input type="text" id="apiKeyInput" placeholder="输入API Key" class="w-full bg-dark-card-hover border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300">
+                        <button id="toggleApiKey" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-300">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button id="saveApiKey" class="bg-gradient-primary hover:bg-primary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 flex-1">
+                        保存
+                    </button>
+                    <button id="resetApiKey" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        恢复默认
+                    </button>
+                </div>
+                <p id="apiKeyStatus" class="text-sm text-gray-400 hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义注销确认模态框 - 三重确认 -->
+    <div id="deleteAccountModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-dark-card max-w-md w-full rounded-2xl p-6 border border-white/10 shadow-xl transform transition-transform duration-300 scale-95">
+            <!-- 第一步确认 -->
+            <div id="deleteStep1" class="">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-4">
+                        <i class="fa-solid fa-exclamation-triangle text-red-500 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-red-500">⚠️ 警告</h3>
+                    <p class="text-gray-300">注销账户将永久删除您的所有数据，此操作不可撤销。</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="deleteStep1Cancel" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        取消
+                    </button>
+                    <button id="deleteStep1Continue" class="bg-red-600 hover:bg-red-500 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        继续
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 第二步确认 -->
+            <div id="deleteStep2" class="hidden">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-4">
+                        <i class="fa-solid fa-exclamation-circle text-red-500 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-red-500">⚠️ 再次确认</h3>
+                    <p class="text-gray-300">此操作将无法恢复！注销账户后，您的所有聊天记录和个人设置将被永久删除。</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="deleteStep2Cancel" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        返回
+                    </button>
+                    <button id="deleteStep2Continue" class="bg-red-600 hover:bg-red-500 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        继续
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 第三步确认 -->
+            <div id="deleteStep3" class="hidden">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-4">
+                        <i class="fa-solid fa-user-slash text-red-500 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-red-500">⚠️ 最后确认</h3>
+                    <p class="text-gray-300 mb-4">请点击"确认注销"以完成操作，您的所有聊天记录将被永久删除！</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="deleteStep3Cancel" class="bg-dark-card-hover hover:bg-white/10 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        返回
+                    </button>
+                    <button id="deleteStep3Confirm" class="bg-red-600 hover:bg-red-500 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1 flex-1">
+                        确认注销
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 注销成功提示 -->
+            <div id="deleteSuccess" class="hidden">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
+                        <i class="fa-solid fa-check-circle text-green-500 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">操作完成</h3>
+                    <p class="text-gray-300">您的账户已被注销，所有数据和聊天记录已被永久删除。</p>
+                </div>
+                <button id="deleteSuccessClose" class="w-full bg-gradient-primary hover:bg-primary text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-1">
+                    确定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 侧边栏覆盖层 - 移动端专用 -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    
+    <!-- 主界面容器 -->
+    <div id="appContainer" class="h-screen flex flex-col md:flex-row">
+        <!-- 侧边栏导航 -->
+        <aside id="sidebar" class="bg-sidebar-bg w-16 md:w-64 h-screen flex flex-col border-r border-white/5 z-30 backdrop-blur-sm">
+            <!-- 品牌标志 -->
+            <div class="flex items-center justify-center md:justify-start gap-3 p-4 border-b border-white/5 hover-lift">
+                <div class="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                    <i class="fa-solid fa-robot text-white"></i>
+                </div>
+                <h1 class="text-xl font-bold text-gradient hidden md:block">Amacis AI</h1>
+            </div>
+            
+            <!-- 新建对话按钮 -->
+            <div class="p-3">
+                <button id="newChatButton" class="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gradient-primary text-white hover-lift shadow-lg shadow-primary/15">
+                    <i class="fa-solid fa-plus text-lg w-6 text-center"></i>
+                    <span class="hidden md:block font-medium">新建对话</span>
+                </button>
+            </div>
+            
+            <!-- 导航菜单 -->
+            <nav class="flex-1 overflow-y-auto scrollbar-thin py-4">
+                <ul class="space-y-1 px-2">
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-sidebar-item-hover text-white">
+                            <i class="fa-solid fa-home text-lg w-6 text-center"></i>
+                            <span class="hidden md:block">主页</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-sidebar-item-hover hover:text-white">
+                            <i class="fa-solid fa-history text-lg w-6 text-center"></i>
+                            <span class="hidden md:block">历史记录</span>
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- 历史记录列表 -->
+                <div class="mt-4 px-2">
+                    <h3 class="text-xs uppercase text-gray-500 px-4 mb-2 hidden md:block">最近对话</h3>
+                    <ul id="historyList" class="space-y-1">
+                        <!-- 历史记录项将通过JavaScript动态添加 -->
+                    </ul>
+                </div>
+            </nav>
+            
+            <!-- 底部用户菜单 -->
+            <div class="mt-auto p-2 border-t border-white/5">
+                <div class="relative">
+                    <div class="flex items-center gap-3 px-4 py-2 rounded-xl bg-dark-card-hover hover:bg-white/10 cursor-pointer hover-lift" id="userMenuTrigger">
+                        <div class="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
+                            <i class="fa-solid fa-user text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div id="usernameDisplay" class="text-white text-sm font-medium">用户</div>
+                            <div class="text-gray-400 text-xs">已登录</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+                    </div>
+                    
+                    <!-- 用户下拉菜单 - 改为独立居中模态框 -->
+                    <div id="userMenuDropdown" class="fixed inset-0 flex items-center justify-center bg-black/50 z-50 opacity-0 pointer-events-none transition-all duration-200">
+                        <div class="bg-darker border border-white/5 rounded-xl shadow-xl w-4/5 max-w-sm overflow-hidden">
+                            <div class="p-4 border-b border-white/5">
+                                <h3 class="text-lg font-medium text-white">账户选项</h3>
+                            </div>
+                            <div class="py-2">
+                                <button id="logoutButton" class="w-full text-left px-4 py-3 hover:bg-dark-card-hover transition-colors">
+                                    <i class="fa-solid fa-sign-out-alt mr-2 text-primary"></i> 登出
+                                </button>
+                                <div class="border-t border-white/5 my-1"></div>
+                                <div class="p-2 text-red-400 text-xs">⚠️ 危险区域</div>
+                                <button id="deleteAccountButton" class="w-full text-left px-4 py-3 text-red-400 hover:bg-red-900/20 transition-colors">
+                                    <i class="fa-solid fa-user-slash mr-2"></i> 注销账户
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden">
+            <!-- 顶部导航栏 -->
+            <header class="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-white/5 glass-effect-dark">
+                <div class="flex items-center gap-4">
+                    <button id="mobileMenuButton" class="md:hidden text-gray-400 hover:text-white transition-colors duration-300">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <div class="md:flex items-center gap-2">
+                            <span class="text-white/70 text-sm hidden sm:inline">当前模型:</span>
+                            <select id="modelSelect" class="bg-dark-card border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary appearance-none hover-lift">
+                                <option value="deepseek-chat">deepseek-chat</option>
+                                <option value="qwen3-8b" selected>Qwen3-8B</option>
+                            </select>
+                        </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button id="openApiSettings" class="w-9 h-9 flex items-center justify-center rounded-lg bg-dark-card text-gray-400 hover:bg-dark-card-hover hover:text-white hover-lift">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 聊天区域 -->
+            <div id="chatBox" class="flex-1 overflow-y-auto scrollbar-thin p-4 sm:p-6 bg-gradient-dark">
+                <!-- 欢迎消息 -->
+                <div class="max-w-3xl mx-auto mb-8">
+                    <div class="bg-dark-card rounded-2xl p-6 border border-white/5 shadow-md">
+                        <h2 class="text-2xl font-bold text-white mb-3">欢迎使用 Amacis AI</h2>
+                        <p class="text-gray-300 mb-4">我是您的 AI 助手，可以帮助您解决问题、回答疑问或进行创意讨论。</p>
+                        
+                        <div class="space-y-2">
+                            <button class="w-full text-left bg-dark-card-hover hover:bg-white/10 p-3 rounded-xl text-white">
+                                <i class="fa-solid fa-code mr-2 text-primary"></i> 如何编写一个简单的 Python 脚本？
+                            </button>
+                            <button class="w-full text-left bg-dark-card-hover hover:bg-white/10 p-3 rounded-xl text-white">
+                                <i class="fa-solid fa-lightbulb mr-2 text-primary"></i> 为我的新项目提供一些创意
+                            </button>
+                            <button class="w-full text-left bg-dark-card-hover hover:bg-white/10 p-3 rounded-xl text-white">
+                                <i class="fa-solid fa-language mr-2 text-primary"></i> 帮我翻译一段文字
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 消息气泡示例 -->
+                    <div class="flex items-start space-x-4 mb-6 max-w-3xl mx-auto">
+                        <div class="w-10 h-10 rounded-full bg-dark-card-hover flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-robot text-white text-sm"></i>
+                        </div>
+                        <div class="bg-dark-card rounded-2xl rounded-tl-none p-4 max-w-[85%] message-hover">
+                            <p class="text-white">您好！我是 Amacis AI，可以和我讨论任何话题。我可以帮助您解决问题、生成内容、提供建议等。有什么我可以帮助您的吗？</p>
+                        </div>
+                    </div>
+
+                <!-- 正在输入提示 -->
+                    <div id="typing" class="flex items-start space-x-4 hidden max-w-3xl mx-auto">
+                        <div class="w-10 h-10 rounded-full bg-dark-card-hover flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-robot text-white text-sm"></i>
+                        </div>
+                        <div class="bg-dark-card rounded-2xl rounded-tl-none p-4 max-w-[85%] message-width-adjusted border border-white/5">
+                            <div class="flex space-x-1.5">
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="p-4 border-t border-white/5 glass-effect-dark">
+                <div class="max-w-3xl mx-auto">
+                    <div class="bg-dark-card rounded-2xl border border-white/10 overflow-hidden shadow-lg hover-lift">
+                        <!-- 工具栏 -->
+                        <div class="flex items-center gap-2 px-4 py-2 border-b border-white/5">
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-dark-card-hover hover:text-white hover-lift">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-dark-card-hover hover:text-white hover-lift">
+                                <i class="fa-solid fa-code"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- 输入框 -->
+                        <div class="p-3">
+                            <div class="flex items-center space-x-3">
+                                <textarea 
+                                    id="userInput" 
+                                    placeholder="输入您的问题..." 
+                                    class="flex-1 bg-transparent outline-none text-white py-2 text-base resize-none"
+                                    rows="1"
+                                ></textarea>
+                                <button id="sendMessage" class="bg-gradient-primary text-white p-3 rounded-lg flex-shrink-0 hover-lift shadow-lg shadow-primary/20">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 底部提示 -->
+                        <div class="px-4 py-2 text-xs text-gray-500 border-t border-white/5">
+                            <span>按 Enter 发送，Shift + Enter 换行</span>
+                            <span class="mx-2">•</span>
+                            <span>支持 Markdown 格式</span>
+                            <div class="mt-1 text-sm text-gray-400">
+                                内容由AI生成，仅供参考，请仔细甄别
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 默认API Key配置 - 每个模型单独配置
+        const DEFAULT_API_KEYS = {
+            'deepseek-chat': 'sk-e345d5497c8643eb861f157be125c2ea',
+            'qwen3-8b': 'sk-vgqqoleqsezcanpffpmmlyvukqazznaijuaacpboiuhegjmh'
+        };
+        
+        // 模型配置映射
+        const modelConfigurations = {
+            'deepseek-chat': {
+                apiUrl: 'https://api.deepseek.com/v1/chat/completions',
+                modelName: 'deepseek-chat'
+            },
+            'qwen3-8b': {
+                apiUrl: 'https://api.siliconflow.cn/v1/chat/completions',
+                modelName: 'Qwen/Qwen3-Coder-30B-A3B-Instruct'
+            }
+        };
+
+        // 应用状态
+        const appState = {
+            isLoggedIn: false,
+            authMode: 'login', // 'login' or 'register'
+            isCookieConsent: false,
+            currentChatId: null,
+            messages: [],
+            chatHistory: [],
+            apiKeys: { ...DEFAULT_API_KEYS } // 为每个模型保存单独的API密钥
+        };
+        
+        // DOM元素缓存
+        const elements = {
+            cookieModal: document.getElementById('cookieModal'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
+            authModal: document.getElementById('authModal'),
+            apiSettingsModal: document.getElementById('apiSettingsModal'),
+            mainContainer: document.getElementById('appContainer'),
+            chatBox: document.getElementById('chatBox'),
+            userInput: document.getElementById('userInput'),
+            typingIndicator: document.getElementById('typing'),
+            sidebar: document.getElementById('sidebar'),
+            mobileMenuButton: document.getElementById('mobileMenuButton'),
+            emailInput: document.getElementById('emailInput'),
+            passwordInput: document.getElementById('passwordInput'),
+            authErrorMsg: document.getElementById('authErrorMsg'),
+            authModalTitle: document.getElementById('authModalTitle'),
+            authModalSubtitle: document.getElementById('authModalSubtitle'),
+            submitAuthBtn: document.getElementById('submitAuth'),
+            toggleAuthModeBtn: document.getElementById('toggleAuthMode'),
+            togglePasswordBtn: document.getElementById('togglePassword'),
+            apiKeyInput: document.getElementById('apiKeyInput'),
+            apiKeyStatus: document.getElementById('apiKeyStatus'),
+            historyList: document.getElementById('historyList')
+        };
+        
+        // 工具函数 - 保存聊天历史到本地存储
+        function saveChatHistory() {
+            localStorage.setItem('chatHistory', JSON.stringify(appState.chatHistory));
+        }
+        
+        // 工具函数 - 从本地存储加载聊天历史
+        function loadChatHistory() {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
+                appState.chatHistory = JSON.parse(savedHistory);
+                renderChatHistory();
+            }
+        }
+        
+        // 工具函数 - 渲染聊天历史列表
+        function renderChatHistory() {
+            const historyList = elements.historyList;
+            historyList.innerHTML = '';
+            
+            // 限制显示最近10条历史记录
+            const recentChats = appState.chatHistory.slice(-10).reverse();
+            
+            recentChats.forEach(chat => {
+                const historyItem = document.createElement('li');
+                historyItem.className = 'transition-all duration-300';
+                
+                const itemContent = document.createElement('a');
+                itemContent.href = '#';
+                itemContent.className = `flex items-center gap-3 px-4 py-2.5 rounded-xl bg-sidebar-item text-white/70 hover:bg-sidebar-item-hover hover:text-white transition-all duration-300 w-full ${chat.id === appState.currentChatId ? 'bg-primary/20 text-primary' : ''}`;
+                itemContent.innerHTML = `
+                    <i class="fa-solid fa-comments text-sm w-6 text-center"></i>
+                    <span class="hidden md:block text-sm truncate">${chat.title}</span>
+                `;
+                
+                // 移动端显示更多按钮
+                const actions = document.createElement('div');
+                actions.className = 'hidden md:flex items-center gap-1 ml-auto';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'text-gray-400 hover:text-white p-1 rounded-lg transition-colors duration-300';
+                deleteBtn.innerHTML = '<i class="fa-solid fa-trash text-xs"></i>';
+                deleteBtn.title = '删除对话';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteChat(chat.id);
+                });
+                
+                actions.appendChild(deleteBtn);
+                itemContent.appendChild(actions);
+                historyItem.appendChild(itemContent);
+                
+                // 绑定点击事件
+                itemContent.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loadChat(chat.id);
+                });
+                
+                historyList.appendChild(historyItem);
+            });
+        }
+        
+        // 工具函数 - 创建新对话
+        function createNewChat() {
+            // 生成唯一ID
+            const chatId = Date.now().toString();
+            const newChat = {
+                id: chatId,
+                title: '新对话',
+                timestamp: new Date().toISOString(),
+                messages: []
+            };
+            
+            // 添加到历史记录
+            appState.chatHistory.push(newChat);
+            appState.currentChatId = chatId;
+            appState.messages = [];
+            
+            // 保存并更新UI
+            saveChatHistory();
+            renderChatHistory();
+            clearChatBox();
+            showWelcomeMessage();
+        }
+        
+        // 工具函数 - 加载指定对话
+        function loadChat(chatId) {
+            const chat = appState.chatHistory.find(c => c.id === chatId);
+            if (chat) {
+                appState.currentChatId = chatId;
+                appState.messages = [...chat.messages];
+                clearChatBox();
+                renderMessages();
+                renderChatHistory();
+            }
+        }
+        
+        // 工具函数 - 删除对话
+        function deleteChat(chatId) {
+            const index = appState.chatHistory.findIndex(c => c.id === chatId);
+            if (index !== -1) {
+                appState.chatHistory.splice(index, 1);
+                saveChatHistory();
+                renderChatHistory();
+                
+                // 如果删除的是当前对话，创建新对话
+                if (chatId === appState.currentChatId) {
+                    if (appState.chatHistory.length > 0) {
+                        loadChat(appState.chatHistory[appState.chatHistory.length - 1].id);
+                    } else {
+                        appState.currentChatId = null;
+                        appState.messages = [];
+                        clearChatBox();
+                        showWelcomeMessage();
+                    }
+                }
+            }
+        }
+        
+        // 工具函数 - 渲染消息列表
+        function renderMessages() {
+            appState.messages.forEach(msg => {
+                addMessage(msg.content, msg.isUser);
+            });
+        }
+        
+        // 工具函数 - 清空聊天框
+        function clearChatBox() {
+            // 保留欢迎消息容器
+            const welcomeContainer = elements.chatBox.querySelector('.max-w-3xl.mx-auto.mb-8');
+            elements.chatBox.innerHTML = '';
+            
+            if (welcomeContainer && appState.messages.length === 0) {
+                elements.chatBox.appendChild(welcomeContainer);
+            }
+            
+            // 重新添加正在输入提示
+            const typingIndicator = document.createElement('div');
+            typingIndicator.id = 'typing';
+            typingIndicator.className = 'flex items-start space-x-4 hidden animate-fade-in max-w-3xl mx-auto';
+            typingIndicator.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-gradient-secondary flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                </div>
+                <div class="bg-dark-card rounded-2xl rounded-tl-none p-4 max-w-[85%] message-width-adjusted border border-white/5">
+                    <div class="flex space-x-1.5">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            elements.chatBox.appendChild(typingIndicator);
+            
+            // 更新DOM元素引用
+            elements.typingIndicator = typingIndicator;
+        }
+        
+        // 工具函数 - 显示欢迎消息
+        function showWelcomeMessage() {
+            if (elements.chatBox.querySelector('.max-w-3xl.mx-auto.mb-8')) return;
+            
+            const welcomeContainer = document.createElement('div');
+            welcomeContainer.className = 'max-w-3xl mx-auto mb-8';
+            welcomeContainer.innerHTML = `
+                <div class="bg-dark-card rounded-2xl p-6 border border-white/5 shadow-md">
+                    <h2 class="text-2xl font-bold text-white mb-3">欢迎使用 Amacis AI</h2>
+                    <p class="text-gray-300 mb-4">我是您的 AI 助手，可以帮助您解决问题、回答疑问或进行创意讨论。</p>
+                    
+                    <div class="space-y-2">
+                        <button class="w-full text-left bg-dark-card-hover hover:bg-white/10 p-3 rounded-xl text-white">
+                            <i class="fa-solid fa-code mr-2 text-primary"></i> 如何编写一个简单的 Python 脚本？
+                        </button>
+                        <button class="w-full text-left bg-dark-card-hover hover:bg-white/10 p-3 rounded-xl text-white">
+                            <i class="fa-solid fa-lightbulb mr-2 text-primary"></i> 为我的新项目提供一些创意
+                        </button>
+                        <button class="w-full text-left bg-dark-card-hover hover:bg-white/10 p-3 rounded-xl text-white">
+                            <i class="fa-solid fa-language mr-2 text-primary"></i> 帮我翻译一段文字
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            elements.chatBox.insertBefore(welcomeContainer, elements.chatBox.firstChild);
+        }
+        
+        // 密码可见性切换函数
+        function togglePasswordVisibility() {
+            const type = elements.passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            elements.passwordInput.setAttribute('type', type);
+            elements.togglePasswordBtn.innerHTML = type === 'password' ? 
+                '<i class="fa-solid fa-eye-slash"></i>' : 
+                '<i class="fa-solid fa-eye"></i>';
+        }
+        
+        // API Key可见性切换函数
+        function toggleApiKeyVisibility() {
+            const type = elements.apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            elements.apiKeyInput.setAttribute('type', type);
+            
+            const toggleBtn = document.getElementById('toggleApiKey');
+            toggleBtn.innerHTML = type === 'password' ? 
+                '<i class="fa-solid fa-eye-slash"></i>' : 
+                '<i class="fa-solid fa-eye"></i>';
+            
+            // 如果当前显示的是真实API Key，切换类型时应该显示掩码
+            if (type === 'password' && elements.apiKeyInput.value === getApiKey()) {
+                elements.apiKeyInput.value = getApiKey().replace(/.(?=.{4})/g, '*');
+            }
+        }
+        
+        // 调整输入框高度函数
+        function adjustTextareaHeight() {
+            const textarea = elements.userInput;
+            textarea.style.height = 'auto';
+            const newHeight = Math.min(textarea.scrollHeight, 120); // 限制最大高度
+            textarea.style.height = `${newHeight}px`;
+        }
+        
+
+        
+        // 显示模态框
+        function showModal(modal) {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+        
+        // 隐藏模态框
+        function hideModal(modal) {
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
+        }
+        
+        // 检查Cookie同意状态
+        function checkCookieConsent() {
+            const cookies = document.cookie.split(';');
+            for(let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if(name === 'cookie_consent' && value === 'true') {
+                    appState.isCookieConsent = true;
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // 接受Cookie
+        function acceptCookies() {
+            const date = new Date();
+            date.setTime(date.getTime() + (365*24*60*60*1000));
+            document.cookie = `cookie_consent=true; expires=${date.toUTCString()}; path=/`;
+            appState.isCookieConsent = true;
+            
+            hideModal(elements.cookieModal);
+            showMainContainer();
+            
+            // 检查用户登录状态
+            if(!checkUserLogin()) {
+                setTimeout(() => {
+                    showModal(elements.authModal);
+                }, 500);
+            } else {
+                loadChatHistory();
+            }
+        }
+        
+        // 拒绝Cookie
+        function declineCookies() {
+            alert('您已拒绝Cookie，无法继续使用本网站。感谢您的访问！');
+            window.location.href = "about:blank";
+        }
+        
+        // 检查用户登录状态
+        function checkUserLogin() {
+            const cookies = document.cookie.split(';');
+            for(let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if(name === 'access_token' && value) {
+                    appState.isLoggedIn = true;
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // 更新认证模态框UI
+        function updateAuthModalUI() {
+            if (appState.authMode === 'login') {
+                elements.authModalTitle.textContent = '登录 Amacis AI';
+                elements.authModalSubtitle.textContent = '请输入您的邮箱和密码以继续';
+                elements.submitAuthBtn.textContent = '登录';
+                elements.toggleAuthModeBtn.textContent = '还没有账号？立即注册';
+            } else {
+                elements.authModalTitle.textContent = '注册 Amacis AI';
+                elements.authModalSubtitle.textContent = '创建账号以开始使用全部功能';
+                elements.submitAuthBtn.textContent = '注册';
+                elements.toggleAuthModeBtn.textContent = '已有账号？立即登录';
+            }
+        }
+        
+        // 切换认证模式
+        function toggleAuthMode() {
+            appState.authMode = appState.authMode === 'login' ? 'register' : 'login';
+            updateAuthModalUI();
+            elements.authErrorMsg.classList.add('hidden');
+        }
+        
+        // 提交认证
+        function submitAuth() {
+            const email = elements.emailInput.value.trim();
+            const password = elements.passwordInput.value;
+            
+            if (!email || !password) {
+                elements.authErrorMsg.textContent = '✖ 请填写所有必填字段';
+                elements.authErrorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            // 邮箱格式验证
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(email)) {
+                elements.authErrorMsg.textContent = '✖ 请输入有效的邮箱地址';
+                elements.authErrorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            // 简单验证 - 实际项目中应该有更复杂的验证和后端API调用
+            if (password.length < 6) {
+                elements.authErrorMsg.textContent = '✖ 密码长度不能少于6位';
+                elements.authErrorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            // 模拟登录/注册成功
+            const date = new Date();
+            date.setTime(date.getTime() + (24*60*60*1000)); // 24小时有效期
+            document.cookie = `access_token=user_${Date.now()}; expires=${date.toUTCString()}; path=/`;
+            document.cookie = `user_email=${email}; expires=${date.toUTCString()}; path=/`;
+            
+            appState.isLoggedIn = true;
+            hideModal(elements.authModal);
+            
+            // 更新用户菜单显示
+            updateUserMenu();
+            
+            // 加载聊天历史
+            loadChatHistory();
+        }
+        
+        // 获取指定模型的API Key
+        function getApiKey(modelName) {
+            // 从cookie中读取保存的API密钥配置
+            const apiKeysJson = localStorage.getItem('modelApiKeys') || '{}';
+            const savedApiKeys = JSON.parse(apiKeysJson);
+            
+            // 如果指定了模型，优先返回该模型的API密钥
+            if (modelName) {
+                return savedApiKeys[modelName] || appState.apiKeys[modelName];
+            }
+            
+            // 如果没有指定模型，返回当前选中模型的API密钥
+            const modelSelect = document.getElementById('modelSelect');
+            const currentModel = modelSelect ? modelSelect.value : 'deepseek-chat';
+            return savedApiKeys[currentModel] || appState.apiKeys[currentModel];
+        }
+        
+        // 设置指定模型的API Key
+        function setApiKey(modelName, apiKey) {
+            appState.apiKeys[modelName] = apiKey;
+            
+            // 保存到localStorage
+            const apiKeysJson = localStorage.getItem('modelApiKeys') || '{}';
+            const savedApiKeys = JSON.parse(apiKeysJson);
+            savedApiKeys[modelName] = apiKey;
+            localStorage.setItem('modelApiKeys', JSON.stringify(savedApiKeys));
+        }
+        
+        // 初始化模型API密钥配置
+        function initModelApiKeys() {
+            try {
+                const apiKeysJson = localStorage.getItem('modelApiKeys') || '{}';
+                const savedApiKeys = JSON.parse(apiKeysJson);
+                
+                // 合并保存的API密钥到appState
+                Object.assign(appState.apiKeys, savedApiKeys);
+            } catch (error) {
+                console.error('初始化API密钥配置失败:', error);
+            }
+        }
+        
+        // 保存API Key
+        function saveApiKey() {
+            const apiModelSelect = document.getElementById('apiModelSelect');
+            const modelName = apiModelSelect ? apiModelSelect.value : 'deepseek-chat';
+            const apiKey = elements.apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                elements.apiKeyStatus.textContent = 'API Key不能为空';
+                elements.apiKeyStatus.classList.remove('hidden', 'text-green-500');
+                elements.apiKeyStatus.classList.add('text-red-500');
+                return;
+            }
+            
+            setApiKey(modelName, apiKey);
+            elements.apiKeyStatus.textContent = `已保存${getModelDisplayName(modelName)}的API Key`;
+            elements.apiKeyStatus.classList.remove('hidden', 'text-red-500');
+            elements.apiKeyStatus.classList.add('text-green-500');
+            
+            setTimeout(() => {
+                hideModal(elements.apiSettingsModal);
+            }, 1500);
+        }
+        
+        // 恢复默认API Key
+        function resetApiKey() {
+            const apiModelSelect = document.getElementById('apiModelSelect');
+            const modelName = apiModelSelect ? apiModelSelect.value : 'deepseek-chat';
+            
+            setApiKey(modelName, DEFAULT_API_KEYS[modelName]);
+            elements.apiKeyInput.value = DEFAULT_API_KEYS[modelName].replace(/.(?=.{4})/g, '*');
+            elements.apiKeyStatus.textContent = `已恢复${getModelDisplayName(modelName)}的默认API Key`;
+            elements.apiKeyStatus.classList.remove('hidden', 'text-red-500');
+            elements.apiKeyStatus.classList.add('text-green-500');
+        }
+        
+        // 获取模型的显示名称
+        function getModelDisplayName(modelName) {
+            const displayNames = {
+                'deepseek-chat': 'DeepSeek',
+                'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+                'gpt-4': 'GPT-4',
+                'qwen3-8b': 'Qwen3-8B'
+            };
+            return displayNames[modelName] || modelName;
+        }
+        
+        // 初始化API设置模态框
+        function initApiSettingsModal() {
+            // 添加模型选择下拉菜单的事件监听器
+            const apiModelSelect = document.getElementById('apiModelSelect');
+            if (apiModelSelect) {
+                apiModelSelect.addEventListener('change', updateApiKeyInput);
+            }
+            
+            // 初始化显示当前选中模型的API密钥
+            updateApiKeyInput();
+        }
+        
+        // 更新API密钥输入框的值
+        function updateApiKeyInput() {
+            const apiModelSelect = document.getElementById('apiModelSelect');
+            if (!apiModelSelect) return;
+            
+            const modelName = apiModelSelect.value;
+            const apiKey = getApiKey(modelName);
+            
+            // 显示部分隐藏的API密钥
+            elements.apiKeyInput.value = apiKey.replace(/.(?=.{4})/g, '*');
+        }
+        
+        // 添加消息到聊天框
+        function addMessage(text, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = isUser ? 
+                'flex items-start space-x-4 justify-end max-w-3xl mx-auto mb-6' : 
+                'flex items-start space-x-4 max-w-3xl mx-auto mb-6';
+
+            const avatar = isUser ? 
+                '<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-user text-white text-sm"></i></div>' :
+                '<div class="w-10 h-10 rounded-full bg-dark-card-hover flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-robot text-white text-sm"></i></div>';
+
+            const bubbleClass = isUser ? 
+                'bg-primary/20 rounded-2xl rounded-tr-none p-4 max-w-[85%] border border-primary/30 message-hover' :
+                'bg-dark-card rounded-2xl rounded-tl-none p-4 max-w-[85%] border border-white/5 message-hover';
+
+            // 使用marked库渲染Markdown
+            const renderedText = isUser ? text : marked.parse(text);
+
+            messageDiv.innerHTML = `${isUser ? '' : avatar}
+                <div class="${bubbleClass}">
+                    <p class="text-white">${renderedText}</p>
+                </div>
+                ${isUser ? avatar : ''}`;
+
+            // 将新消息添加到聊天框末尾
+            elements.chatBox.appendChild(messageDiv);
+            // 确保打字指示器始终在最底部
+            if (elements.typingIndicator && elements.typingIndicator.parentNode) {
+                elements.chatBox.appendChild(elements.typingIndicator);
+            }
+
+            // 滚动到底部
+            elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+        }
+        
+        // 显示正在输入提示
+        function showTyping() {
+            if (elements.typingIndicator) {
+                elements.typingIndicator.classList.remove('hidden');
+                elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+            }
+        }
+        
+        // 隐藏正在输入提示
+        function hideTyping() {
+            if (elements.typingIndicator) {
+                elements.typingIndicator.classList.add('hidden');
+            }
+        }
+        
+        // 显示主容器
+        function showMainContainer() {
+            elements.mainContainer.classList.remove('opacity-0', 'pointer-events-none');
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            // 只有在用户已登录的情况下才发送消息
+            if(!appState.isLoggedIn) {
+                showModal(elements.authModal);
+                return;
+            }
+            
+            // 从Cookie获取最新的API Key
+            const apiKey = getApiKey();
+            
+            const question = elements.userInput.value.trim();
+            if (!question) return;
+            
+            // 如果没有当前对话，创建一个新对话
+            if (!appState.currentChatId) {
+                createNewChat();
+            }
+            
+            // 添加用户消息
+            addMessage(question, true);
+            
+            // 保存到当前对话
+            const userMessage = {
+                content: question,
+                isUser: true,
+                timestamp: new Date().toISOString()
+            };
+            appState.messages.push(userMessage);
+            
+            // 更新对话标题（使用用户的第一个问题作为标题）
+            const currentChat = appState.chatHistory.find(c => c.id === appState.currentChatId);
+            if (currentChat && currentChat.title === '新对话') {
+                currentChat.title = question.length > 30 ? question.substring(0, 30) + '...' : question;
+                saveChatHistory();
+                renderChatHistory();
+            }
+            
+            elements.userInput.value = '';
+            adjustTextareaHeight();
+            showTyping();
+            
+            try {
+                // 获取选定的模型
+                const modelSelect = document.getElementById('modelSelect');
+                const selectedModel = modelSelect ? modelSelect.value : 'deepseek-chat';
+                
+                // 获取模型配置
+                const modelConfig = modelConfigurations[selectedModel] || modelConfigurations['deepseek-chat'];
+                
+                // 使用选定模型的API调用，启用流式响应
+                const apiKey = getApiKey(selectedModel);
+                const response = await fetch(modelConfig.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelConfig.modelName,
+                        messages: [{ role: 'user', content: question }],
+                        temperature: 0.7,
+                        stream: true
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP错误! 状态码: ${response.status}`);
+                
+                // 隐藏"正在输入"提示，开始显示流式响应
+                hideTyping();
+                
+                // 创建一个空的AI消息元素用于流式显示
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex items-start space-x-4 max-w-3xl mx-auto mb-6';
+
+                // 创建头像元素
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'w-10 h-10 rounded-full bg-dark-card-hover flex items-center justify-center flex-shrink-0';
+                avatarDiv.innerHTML = '<i class="fa-solid fa-robot text-white text-sm"></i>';
+                
+                // 创建消息气泡元素
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'bg-dark-card rounded-2xl rounded-tl-none p-4 max-w-[85%] border border-white/5 message-hover';
+                
+                // 创建内容显示元素（使用随机ID避免冲突）
+                const responseElement = document.createElement('p');
+                responseElement.className = 'text-white';
+                
+                // 组装消息元素
+                bubbleDiv.appendChild(responseElement);
+                messageDiv.appendChild(avatarDiv);
+                messageDiv.appendChild(bubbleDiv);
+                
+                // 添加到聊天框
+                elements.chatBox.appendChild(messageDiv);
+                // 确保打字指示器始终在最底部
+                if (elements.typingIndicator && elements.typingIndicator.parentNode) {
+                    elements.chatBox.appendChild(elements.typingIndicator);
+                }
+                
+                // 滚动到底部
+                elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+                
+                // 逐步读取和显示流式响应
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    // 解析接收到的SSE格式数据
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.replace('data: ', '');
+                            if (dataStr === '[DONE]') continue;
+                            
+                            try {
+                                const data = JSON.parse(dataStr);
+                                // 提取增量内容
+                                const content = data.choices[0].delta.content || '';
+                                if (content) {
+                                    fullResponse += content;
+                                    // 更新显示内容，支持Markdown渲染
+                                    responseElement.innerHTML = marked.parse(fullResponse);
+                                    // 滚动到底部
+                                    elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+                                }
+                            } catch (error) {
+                                console.error('解析响应数据错误:', error);
+                            }
+                        }
+                    }
+                }
+                
+                // 保存完整的AI回复到当前对话
+                const aiMessage = {
+                    content: fullResponse,
+                    isUser: false,
+                    timestamp: new Date().toISOString()
+                };
+                appState.messages.push(aiMessage);
+                
+                // 更新对话历史
+                const chatIndex = appState.chatHistory.findIndex(c => c.id === appState.currentChatId);
+                if (chatIndex !== -1) {
+                    appState.chatHistory[chatIndex].messages = appState.messages;
+                    saveChatHistory();
+                }
+            } catch (error) {
+                hideTyping();
+                addMessage(`⚠️ 请求出错：${error.message}`, false);
+                console.error('API请求错误:', error);
+            }
+        }
+        
+        // 这里曾经是toggleTheme函数，现已移除，因为应用始终使用深色模式
+        
+        // 初始化主题 - 仅保留深色模式
+        function initTheme() {
+            // 始终应用深色模式
+            document.body.classList.add('bg-gradient-dark', 'text-light', 'dark');
+            document.body.classList.remove('bg-gradient-light', 'text-dark', 'light');
+        }
+        
+        // 更新用户菜单显示
+        function updateUserMenu() {
+            const usernameElement = document.getElementById('usernameDisplay');
+            if (usernameElement) {
+                // 获取用户邮箱
+                const userEmail = getCookie('user_email');
+                if (userEmail) {
+                    // 提取@之前的内容作为用户名显示
+                    const username = userEmail.split('@')[0];
+                    usernameElement.textContent = username;
+                }
+            }
+        }
+        
+        // 获取Cookie值的辅助函数
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for(let cookie of cookies) {
+                const [cookieName, cookieValue] = cookie.trim().split('=');
+                if(cookieName === name) {
+                    return decodeURIComponent(cookieValue);
+                }
+            }
+            return null;
+        }
+        
+        // 登出函数
+        function logout() {
+            // 立即隐藏用户下拉菜单
+            hideUserMenu();
+            
+            // 删除登录相关的Cookie
+            document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'user_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            
+            // 重置应用状态
+            appState.isLoggedIn = false;
+            appState.currentChatId = null;
+            appState.messages = [];
+            
+            // 清空聊天框
+            clearChatBox();
+            showWelcomeMessage();
+            
+            // 重置用户菜单显示
+            const usernameElement = document.getElementById('usernameDisplay');
+            if (usernameElement) {
+                usernameElement.textContent = '用户';
+            }
+            
+            // 延迟显示登录模态框，确保所有状态已清除
+            setTimeout(() => {
+                showModal(elements.authModal);
+            }, 200);
+        }
+        
+        // 初始化注销确认模态框
+        function initDeleteAccountModal() {
+            const modal = document.getElementById('deleteAccountModal');
+            const step1 = document.getElementById('deleteStep1');
+            const step2 = document.getElementById('deleteStep2');
+            const step3 = document.getElementById('deleteStep3');
+            const success = document.getElementById('deleteSuccess');
+            
+            // 步骤按钮
+            const step1Cancel = document.getElementById('deleteStep1Cancel');
+            const step1Continue = document.getElementById('deleteStep1Continue');
+            const step2Cancel = document.getElementById('deleteStep2Cancel');
+            const step2Continue = document.getElementById('deleteStep2Continue');
+            const step3Cancel = document.getElementById('deleteStep3Cancel');
+            const step3Confirm = document.getElementById('deleteStep3Confirm');
+            const successClose = document.getElementById('deleteSuccessClose');
+            
+            // 显示模态框
+            function showDeleteModal() {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    modal.querySelector('div').classList.remove('scale-95');
+                    modal.querySelector('div').classList.add('scale-100');
+                }, 10);
+            }
+            
+            // 隐藏模态框
+            function hideDeleteModal() {
+                modal.querySelector('div').classList.remove('scale-100');
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                    // 重置到第一步
+                    step1.classList.remove('hidden');
+                    step2.classList.add('hidden');
+                    step3.classList.add('hidden');
+                    success.classList.add('hidden');
+                }, 300);
+            }
+            
+            // 步骤导航
+            step1Continue.addEventListener('click', () => {
+                step1.classList.add('hidden');
+                step2.classList.remove('hidden');
+            });
+            
+            step2Cancel.addEventListener('click', hideDeleteModal);
+            
+            step2Continue.addEventListener('click', () => {
+                step2.classList.add('hidden');
+                step3.classList.remove('hidden');
+            });
+            
+            step3Cancel.addEventListener('click', hideDeleteModal);
+            
+            // 确认注销
+            step3Confirm.addEventListener('click', () => {
+                // 立即隐藏用户下拉菜单
+                hideUserMenu();
+                
+                // 执行账户注销操作
+                // 清除所有Cookie和本地存储
+                document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                document.cookie = 'user_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                document.cookie = 'api_key=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                // 确保清除所有可能的Cookie
+                const cookies = document.cookie.split(';');
+                for(let cookie of cookies) {
+                    const [cookieName] = cookie.trim().split('=');
+                    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                }
+                localStorage.clear();
+                
+                // 重置应用状态
+                appState.isLoggedIn = false;
+                appState.currentChatId = null;
+                appState.messages = [];
+                appState.chatHistory = [];
+                appState.apiKey = DEFAULT_API_KEY;
+                
+                // 清空聊天框
+                clearChatBox();
+                showWelcomeMessage();
+                
+                // 重置用户菜单显示
+                const usernameElement = document.getElementById('usernameDisplay');
+                if (usernameElement) {
+                    usernameElement.textContent = '用户';
+                }
+                
+                // 显示成功页面
+                step3.classList.add('hidden');
+                success.classList.remove('hidden');
+            });
+            
+            // 关闭模态框的按钮
+            step1Cancel.addEventListener('click', hideDeleteModal);
+            successClose.addEventListener('click', () => {
+                hideDeleteModal();
+                // 显示登录模态框
+                showModal(elements.authModal);
+            });
+            
+            // 点击背景关闭模态框（仅在第一步）
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal && !step2.classList.contains('hidden') && !step3.classList.contains('hidden')) {
+                    hideDeleteModal();
+                }
+            });
+            
+            // 导出显示模态框的函数
+            return showDeleteModal;
+        }
+        
+        // 初始化注销模态框并获取显示函数
+        const showDeleteAccountModal = initDeleteAccountModal();
+        
+        // 注销账户函数
+        function deleteAccount() {
+            // 显示自定义的三重确认模态框
+            showDeleteAccountModal();
+        }
+        
+        // 显示用户下拉菜单
+        function showUserMenu() {
+            const dropdown = document.getElementById('userMenuDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('opacity-0', 'pointer-events-none');
+                dropdown.style.opacity = '1';
+                dropdown.style.pointerEvents = 'auto';
+                // 确保z-index足够高
+                dropdown.style.zIndex = '100';
+            }
+        }
+        
+        // 隐藏用户下拉菜单
+        function hideUserMenu() {
+            const dropdown = document.getElementById('userMenuDropdown');
+            if (dropdown) {
+                dropdown.classList.add('opacity-0', 'pointer-events-none');
+                dropdown.style.opacity = '0';
+                dropdown.style.pointerEvents = 'none';
+                dropdown.style.zIndex = '1';
+            }
+        }
+        
+        // 事件监听
+        function initEventListeners() {
+            // Cookie相关
+            document.getElementById('acceptCookies').addEventListener('click', acceptCookies);
+            document.getElementById('declineCookies').addEventListener('click', declineCookies);
+            
+            // 登录/注册相关
+            elements.submitAuthBtn.addEventListener('click', submitAuth);
+            elements.toggleAuthModeBtn.addEventListener('click', toggleAuthMode);
+            elements.togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+            
+            // API设置相关
+            document.getElementById('openApiSettings').addEventListener('click', () => {
+                const apiKey = getApiKey();
+                elements.apiKeyInput.value = apiKey.replace(/.(?=.{4})/g, '*');
+                elements.apiKeyInput.setAttribute('type', 'text');
+                document.getElementById('toggleApiKey').innerHTML = '<i class="fa-solid fa-eye"></i>';
+                showModal(elements.apiSettingsModal);
+            });
+            
+            document.getElementById('closeApiSettings').addEventListener('click', () => hideModal(elements.apiSettingsModal));
+            document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
+            document.getElementById('saveApiKey').addEventListener('click', saveApiKey);
+            document.getElementById('resetApiKey').addEventListener('click', resetApiKey);
+            
+            // 聊天相关
+            document.getElementById('sendMessage').addEventListener('click', sendMessage);
+            
+            elements.userInput.addEventListener('input', adjustTextareaHeight);
+            
+            elements.userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // 移动端菜单
+            elements.mobileMenuButton.addEventListener('click', () => {
+                elements.sidebar.classList.toggle('active');
+                elements.sidebarOverlay.classList.toggle('active');
+            });
+            
+            // 侧边栏覆盖层点击事件
+            elements.sidebarOverlay.addEventListener('click', () => {
+                elements.sidebar.classList.remove('active');
+                elements.sidebarOverlay.classList.remove('active');
+            });
+            
+            // 在小屏幕上，点击侧边栏中的链接时关闭侧边栏
+            const sidebarLinks = elements.sidebar.querySelectorAll('a, button');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 768) {
+                        elements.sidebar.classList.remove('active');
+                        elements.sidebarOverlay.classList.remove('active');
+                    }
+                });
+            })
+            
+            // 用户菜单相关
+            const userMenuTrigger = document.getElementById('userMenuTrigger');
+            const userMenuDropdown = document.getElementById('userMenuDropdown');
+            const logoutButton = document.getElementById('logoutButton');
+            const deleteAccountButton = document.getElementById('deleteAccountButton');
+            
+            if (userMenuTrigger) {
+                // 确保用户菜单触发器可以被点击
+                userMenuTrigger.style.pointerEvents = 'auto';
+                
+                userMenuTrigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    // 切换下拉菜单显示状态
+                    if (userMenuDropdown) {
+                        const isVisible = !userMenuDropdown.classList.contains('opacity-0');
+                        if (isVisible) {
+                            hideUserMenu();
+                        } else {
+                            // 确保先隐藏再显示，防止状态混乱
+                            hideUserMenu();
+                            setTimeout(() => {
+                                showUserMenu();
+                            }, 50);
+                        }
+                    }
+                });
+                
+                // 添加触摸事件支持，确保在移动设备上也能正常工作
+                userMenuTrigger.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    // 切换下拉菜单显示状态
+                    if (userMenuDropdown) {
+                        const isVisible = !userMenuDropdown.classList.contains('opacity-0');
+                        if (isVisible) {
+                            hideUserMenu();
+                        } else {
+                            // 确保先隐藏再显示，防止状态混乱
+                            hideUserMenu();
+                            setTimeout(() => {
+                                showUserMenu();
+                            }, 50);
+                        }
+                    }
+                });
+            }
+            
+            if (logoutButton) {
+                logoutButton.addEventListener('click', logout);
+            }
+            
+            if (deleteAccountButton) {
+                deleteAccountButton.addEventListener('click', deleteAccount);
+            }
+            
+            // 点击页面其他地方关闭下拉菜单
+            function handleDocumentClick(e) {
+                if (userMenuTrigger && userMenuDropdown && !userMenuTrigger.contains(e.target) && !userMenuDropdown.contains(e.target)) {
+                    hideUserMenu();
+                }
+            }
+            
+            // 使用捕获阶段监听，确保优先处理
+            document.addEventListener('click', handleDocumentClick, true);
+            
+            // 为用户菜单添加特定的点击外部关闭逻辑
+            if (userMenuDropdown) {
+                // 创建一个专门用于检测点击外部的覆盖层
+                let menuOverlay = document.createElement('div');
+                menuOverlay.style.position = 'fixed';
+                menuOverlay.style.top = '0';
+                menuOverlay.style.left = '0';
+                menuOverlay.style.width = '100%';
+                menuOverlay.style.height = '100%';
+                menuOverlay.style.zIndex = '99'; // 低于菜单但高于其他内容
+                menuOverlay.style.backgroundColor = 'transparent';
+                menuOverlay.classList.add('user-menu-overlay');
+                
+                // 隐藏状态下不显示覆盖层
+                menuOverlay.style.display = 'none';
+                
+                // 添加到body
+                document.body.appendChild(menuOverlay);
+                
+                // 覆盖层点击事件
+                menuOverlay.addEventListener('click', () => {
+                    hideUserMenu();
+                });
+                
+                // 修改showUserMenu函数，显示覆盖层
+                const originalShowUserMenu = showUserMenu;
+                window.showUserMenu = function() {
+                    originalShowUserMenu();
+                    menuOverlay.style.display = 'block';
+                };
+                
+                // 修改hideUserMenu函数，隐藏覆盖层
+                const originalHideUserMenu = hideUserMenu;
+                window.hideUserMenu = function() {
+                    originalHideUserMenu();
+                    menuOverlay.style.display = 'none';
+                };
+            }
+            
+            // 历史记录相关
+            document.getElementById('newChatButton').addEventListener('click', createNewChat);
+        }
+        
+        // 初始化应用
+        function initApp() {
+            // 初始化主题
+            initTheme();
+            
+            // 初始化事件监听器
+            initEventListeners();
+            
+            // 初始化UI状态
+            updateAuthModalUI();
+            
+            // 在移动设备上默认隐藏侧边栏
+            if (window.innerWidth < 768) {
+                elements.sidebar.classList.remove('active');
+            } else {
+                elements.sidebar.classList.add('active');
+            }
+            
+            // 检查Cookie和登录状态
+            if(checkCookieConsent()) {
+                showMainContainer();
+                if(!checkUserLogin()) {
+                    // 延迟显示登录模态框，让页面有时间加载
+                    setTimeout(() => {
+                        showModal(elements.authModal);
+                    }, 500);
+                } else {
+                    // 已登录，加载聊天历史
+                    loadChatHistory();
+                    // 更新用户菜单显示
+                    updateUserMenu();
+                }
+            } else {
+                // 显示Cookie同意弹窗
+                setTimeout(() => {
+                    showModal(elements.cookieModal);
+                }, 300);
+            }
+            
+            // 自动调整文本框高度
+            adjustTextareaHeight();
+            
+            // 初始化API设置模态框
+            initApiSettingsModal();
+        }
+        
+        // 窗口大小改变时调整侧边栏状态
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                elements.sidebar.classList.add('active');
+                elements.sidebarOverlay.classList.remove('active');
+            } else if (elements.sidebar.classList.contains('active')) {
+                // 仅在移动设备上保持当前状态，不自动隐藏
+            }
+        });
+        
+        // 页面加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+
+</body>
+</html>
+    

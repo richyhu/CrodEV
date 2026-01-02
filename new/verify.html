@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全验证系统</title>
+    <link rel="preload" href="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/f9dd7a0acff14b0fa1ed93cf27f43ed7~tplv-a9rns2rl98-image.image?rcl=20251214051948AD82B6BD0F0B3D406402&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1766265592&amp;x-signature=NmXk%2FrtKlEK3ChgibIgGGzs0Euo%3D" as="image">
+    <link rel="icon" href="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/f9dd7a0acff14b0fa1ed93cf27f43ed7~tplv-a9rns2rl98-image.image?rcl=20251214051948AD82B6BD0F0B3D406402&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1766265592&amp;x-signature=NmXk%2FrtKlEK3ChgibIgGGzs0Euo%3D">
+    <style>
+        /* 自定义安全验证样式 - 完全重构的CSS代码 */
+
+        /* 基础重置和全局样式 */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* HTML和BODY样式 */
+        html {
+            height: 100vh;
+            font-size: 16px;
+        }
+
+        body {
+            background: #ffffff;
+            color: #333333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            text-align: center;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* 主容器样式 */
+        .main-content {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        /* 图标样式 */
+        .verification-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            margin: 0 auto 30px;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 标题样式 */
+        .verification-title {
+            font-size: 28px;
+            font-weight: 400;
+            margin: 0 0 30px;
+            color: #2c3e50;
+        }
+
+        /* 按钮样式 */
+        .verification-button {
+            background: #0066cc;
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            outline: none;
+        }
+
+        .verification-button:hover {
+            background: #0077ee;
+            transform: translateY(-1px);
+        }
+
+        .verification-button:active {
+            background: #0055bb;
+            transform: translateY(0);
+        }
+
+        /* 进度条样式 */
+        .loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2px;
+            background: #0066cc;
+            width: 40%;
+            animation: slideAnimation 1.5s linear infinite;
+            z-index: 9999;
+        }
+
+        /* 动画定义 */
+        @keyframes slideAnimation {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(250%);
+            }
+        }
+
+        /* 页脚样式 */
+        .page-footer {
+            position: fixed;
+            bottom: 35px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: rgba(0, 0, 0, 0.5);
+        }
+
+        .page-footer a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .page-footer a:hover {
+            color: #4191f5;
+            text-decoration: underline;
+        }
+
+        /* 深色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+            }
+            
+            body {
+                background: #1e1e1e;
+                color: #ffffff;
+            }
+            
+            .page-footer {
+                color: rgba(255, 255, 255, 0.5);
+            }
+            
+            .verification-title {
+                color: #ecf0f1;
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .verification-title {
+                font-size: 24px;
+            }
+            
+            .verification-button {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loading-indicator" id="loadingBar"></div>
+    
+    <div class="main-content">
+        <img class="verification-icon" id="appIcon" src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/f9dd7a0acff14b0fa1ed93cf27f43ed7~tplv-a9rns2rl98-image.image?rcl=20251214051948AD82B6BD0F0B3D406402&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1766265592&amp;x-signature=NmXk%2FrtKlEK3ChgibIgGGzs0Euo%3D" alt="安全验证">
+        <h1 class="verification-title" id="pageTitle">正在验证您的身份</h1>
+        <button class="verification-button" id="verifyButton" style="display: none;">验证身份</button>
+    </div>
+    
+    <div class="page-footer">
+        © 2025 <a href="" target="_blank">CoudEV</a> 丨 安全验证服务
+    </div>
+
+    <script>
+        (function() {
+            // Cookie 管理功能
+            const COOKIE_NAME = 'amacis_verified';
+            const COOKIE_DAYS = 30; // 30天有效期
+            const COOKIE_PATH = '/';
+
+            // 设置 Cookie
+            function setCookie(name, value, days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                const expires = "expires=" + date.toUTCString();
+                document.cookie = name + "=" + value + ";" + expires + ";path=" + COOKIE_PATH + ";SameSite=Lax";
+            }
+
+            // 获取 Cookie
+            function getCookie(name) {
+                const nameEQ = name + "=";
+                const ca = document.cookie.split(';');
+                for (let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                }
+                return null;
+            }
+
+            // 删除 Cookie
+            function deleteCookie(name) {
+                document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=" + COOKIE_PATH + ";SameSite=Lax";
+            }
+
+            // 检查 Cookie 是否过期
+            function isCookieExpired(name) {
+                const cookie = getCookie(name);
+                if (!cookie) return true;
+                
+                try {
+                    const cookieData = JSON.parse(cookie);
+                    const now = new Date().getTime();
+                    return now > cookieData.expires;
+                } catch (e) {
+                    return true;
+                }
+            }
+
+            // 验证成功处理 - 设置 Cookie 并重定向到聊天界面
+            function handleVerificationSuccess() {
+                // 显示验证成功状态
+                titleElement.textContent = "验证成功，正在进入...";
+                progressElement.style.display = "block";
+                actionButton.style.display = "none";
+                
+                // 生成验证数据
+                const verificationData = {
+                    token: generateSecurityToken(40),
+                    timestamp: new Date().getTime(),
+                    expires: new Date().getTime() + (COOKIE_DAYS * 24 * 60 * 60 * 1000),
+                    userAgent: navigator.userAgent,
+                    ip: '127.0.0.1', // 实际环境中可以从服务器获取
+                    interactionData: userActivityLog.slice(-20).join("|")
+                };
+
+                try {
+                    // 设置 Cookie
+                    setCookie(COOKIE_NAME, JSON.stringify(verificationData), COOKIE_DAYS);
+                    console.log('验证成功，Cookie已设置:', verificationData.token.substring(0, 8) + '...');
+                    
+                    // 延迟重定向，给用户更好的视觉反馈
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } catch (error) {
+                    console.error('验证过程中出错:', error);
+                    titleElement.textContent = "验证失败，请刷新页面重试";
+                    actionButton.style.display = "inline-block";
+                    actionButton.textContent = "重新验证";
+                }
+            }
+
+            // 生成安全令牌
+            function generateSecurityToken(length) {
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                let token = "";
+                for (let i = 0; i < length; i++) {
+                    token += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return token;
+            }
+
+            // 用户活动日志
+            const userActivityLog = [];
+            let hasUserInteraction = false;
+            const progressElement = document.getElementById('loadingBar');
+            const titleElement = document.getElementById('pageTitle');
+            const actionButton = document.getElementById('verifyButton');
+
+            // 记录用户操作
+            function logUserAction(actionType, x, y) {
+                userActivityLog.push([actionType, x, y].join(":"));
+            }
+
+            // 事件处理函数
+            const eventHandlers = {
+                handleMouseEvents: function(event) {
+                    hasUserInteraction = true;
+                    logUserAction("mouse", event.pageX, event.pageY);
+                },
+                handleKeyboardEvents: function(event) {
+                    hasUserInteraction = true;
+                    userActivityLog.push("key:" + event.key);
+                },
+                handleTouchEvents: function(event) {
+                    hasUserInteraction = true;
+                    logUserAction(
+                        "touch",
+                        Math.round(event.touches[0].pageX),
+                        Math.round(event.touches[0].pageY)
+                    );
+                },
+                handleButtonClick: function() {
+                    setTimeout(() => {
+                        if (hasUserInteraction) {
+                            handleVerificationSuccess();
+                        } else {
+                            window.alert("验证失败，请重试。");
+                        }
+                    }, 150);
+                }
+            };
+
+            // 检查 Cookie 状态
+            function checkCookieStatus() {
+                const cookie = getCookie(COOKIE_NAME);
+                
+                if (cookie) {
+                    if (isCookieExpired(COOKIE_NAME)) {
+                        // Cookie 过期，删除并重定向到验证页面
+                        deleteCookie(COOKIE_NAME);
+                        console.log('Cookie 已过期，需要重新验证');
+                        // 继续显示验证页面
+                    } else {
+                        // Cookie 有效，直接重定向到主页
+                        console.log('Cookie 有效，直接访问主页');
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    console.log('没有找到验证 Cookie，需要验证');
+                    // 继续显示验证页面
+                }
+            }
+
+            // 初始化
+            function init() {
+                // 首先检查 Cookie 状态
+                checkCookieStatus();
+
+                // 添加事件监听器
+                window.addEventListener("mousedown", eventHandlers.handleMouseEvents);
+                window.addEventListener("mousemove", eventHandlers.handleMouseEvents);
+                window.addEventListener("keydown", eventHandlers.handleKeyboardEvents);
+                window.addEventListener("touchstart", eventHandlers.handleTouchEvents);
+                actionButton.addEventListener("click", eventHandlers.handleButtonClick);
+
+                // 自动验证逻辑
+                setTimeout(() => {
+                    if (hasUserInteraction) {
+                        handleVerificationSuccess();
+                    } else {
+                        progressElement.style.display = "none";
+                        titleElement.textContent = "请点击验证按钮继续";
+                        actionButton.style.display = "inline-block";
+                        actionButton.textContent = "验证身份";
+                    }
+                }, 1000);
+            }
+
+            // 启动初始化
+            init();
+
+        })();
+    </script>
+
+</body>
+</html>

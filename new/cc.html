@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AmacisAI - 极简助手</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#131314', // Gemini 主背景
+                        surface: '#1E1F20',    // 侧边栏/卡片背景
+                        hover: '#2D2E35',      // 悬停交互色
+                        border: '#444746',     // 细微边框
+                        primary: '#A8C7FA',    // Gemini 标志性蓝色
+                        text: '#E3E3E3',       // 主文字
+                        muted: '#9CA3AF',      // 次要文字
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 基础重置 */
+        body {
+            background-color: #131314;
+            color: #E3E3E3;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- 侧边栏 CSS --- */
+        #sidebar {
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: width;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        /* 折叠状态的侧边栏 */
+        #sidebar.collapsed {
+            width: 72px;
+        }
+
+        /* 折叠时隐藏文字 */
+        #sidebar.collapsed .sidebar-text {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        /* --- 消息流 CSS --- */
+        .user-msg-bubble {
+            background-color: #2D2E35;
+            border-radius: 1.5rem;
+            padding: 0.75rem 1.25rem;
+            max-width: 85%;
+        }
+
+        .ai-msg-container {
+            width: 100%;
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Markdown 内容微调 */
+        .prose-custom {
+            line-height: 1.75;
+            color: #E3E3E3;
+        }
+        .prose-custom code {
+            background: #2D2E35;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+
+        /* --- 输入框 CSS --- */
+        .input-pill-container {
+            background-color: #1E1F20;
+            border-radius: 2rem;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .input-pill-container:focus-within {
+            background-color: #282A2C;
+            border-color: #444746;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 按钮动画 */
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+            color: #9CA3AF;
+        }
+        .btn-icon:hover {
+            background-color: #333537;
+            color: #E3E3E3;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex">
+
+    <aside id="sidebar" class="bg-surface border-r border-border h-full w-[280px] flex flex-col z-30 shrink-0">
+        
+        <div class="h-16 flex items-center justify-between px-5 shrink-0">
+            <div class="flex items-center gap-3 sidebar-text overflow-hidden">
+                <div class="w-8 h-8 rounded-lg bg-primary text-background flex items-center justify-center font-bold">A</div>
+                <span class="text-lg font-medium tracking-tight">AmacisAI</span>
+            </div>
+            <button id="sidebarToggle" class="btn-icon">
+                <i class="fa-solid fa-bars-staggered"></i>
+            </button>
+        </div>
+
+        <div class="px-3 mb-6">
+            <button class="w-full flex items-center gap-3 bg-hover hover:bg-[#393A41] text-text py-3 px-4 rounded-xl transition-all group overflow-hidden">
+                <i class="fa-solid fa-plus text-primary text-lg shrink-0"></i>
+                <span class="font-medium sidebar-text">新建对话</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-2 no-scrollbar">
+            <div class="px-3 py-2 text-xs font-medium text-muted uppercase sidebar-text tracking-widest">最近记录</div>
+            <div class="space-y-1 mt-2">
+                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-hover text-left transition-colors group">
+                    <i class="fa-regular fa-comment text-muted group-hover:text-text"></i>
+                    <span class="truncate text-sm text-text sidebar-text">关于 UI 优化的构思</span>
+                </button>
+                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-hover text-left transition-colors group">
+                    <i class="fa-regular fa-comment text-muted group-hover:text-text"></i>
+                    <span class="truncate text-sm text-text sidebar-text">Python 数据分析脚本</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-3 border-t border-border">
+            <button class="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-hover transition-colors">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 shrink-0"></div>
+                <div class="flex-1 text-left overflow-hidden sidebar-text">
+                    <div class="text-sm font-medium truncate">访客用户</div>
+                    <div class="text-xs text-muted">Free Plan</div>
+                </div>
+                <i class="fa-solid fa-ellipsis-vertical text-muted sidebar-text"></i>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative min-w-0">
+        
+        <header class="h-16 flex items-center justify-between px-6 shrink-0 z-10">
+            <div class="flex items-center gap-2 group cursor-pointer hover:bg-surface px-3 py-1.5 rounded-lg transition-colors">
+                <span class="font-medium text-lg text-text">Qwen3-8B</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-muted group-hover:text-text"></i>
+            </div>
+            
+            <div class="flex items-center gap-1">
+                <button class="btn-icon"><i class="fa-solid fa-share-nodes"></i></button>
+                <button class="btn-icon"><i class="fa-solid fa-circle-user text-xl"></i></button>
+            </div>
+        </header>
+
+        <div id="chatBox" class="flex-1 overflow-y-auto no-scrollbar px-4">
+            <div class="max-w-3xl mx-auto pt-10 pb-40">
+                
+                <div id="welcomeScreen" class="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-8 animate-[fadeIn_0.5s_ease-out]">
+                    <div class="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-sparkles text-3xl text-primary"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-4xl font-medium bg-gradient-to-r from-blue-400 via-purple-400 to-red-300 bg-clip-text text-transparent">你好，我是 Amacis</h1>
+                        <p class="text-muted mt-3 text-lg">我今天能帮你写代码、解答疑问或构思创意吗？</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-2xl">
+                        <button class="quick-cmd-btn text-left bg-surface hover:bg-hover p-4 rounded-2xl border border-transparent hover:border-border transition-all">
+                            <i class="fa-solid fa-code text-blue-400 mb-2"></i>
+                            <div class="text-sm font-medium">帮我写一段代码</div>
+                        </button>
+                        <button class="quick-cmd-btn text-left bg-surface hover:bg-hover p-4 rounded-2xl border border-transparent hover:border-border transition-all">
+                            <i class="fa-solid fa-pen-nib text-purple-400 mb-2"></i>
+                            <div class="text-sm font-medium">写一封正式邮件</div>
+                        </button>
+                        <button class="quick-cmd-btn text-left bg-surface hover:bg-hover p-4 rounded-2xl border border-transparent hover:border-border transition-all">
+                            <i class="fa-solid fa-lightbulb text-yellow-400 mb-2"></i>
+                            <div class="text-sm font-medium">给我一些创意灵感</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="messageList" class="space-y-10 hidden">
+                    <div class="flex justify-end">
+                        <div class="user-msg-bubble">
+                            帮我解释一下什么是量子纠缠？
+                        </div>
+                    </div>
+                    <div class="ai-msg-container">
+                        <div class="w-8 h-8 rounded-full bg-white text-background flex items-center justify-center shrink-0 mt-1">
+                            <i class="fa-solid fa-robot text-xs"></i>
+                        </div>
+                        <div class="prose-custom flex-1">
+                            量子纠缠是量子力学中一种奇特的现象，当两个或多个微观粒子处于纠缠态时，它们之间的状态会变得高度关联...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 w-full px-4 pb-6 pt-10 bg-gradient-to-t from-background via-background to-transparent z-20">
+            <div class="max-w-3xl mx-auto">
+                <div class="input-pill-container p-2 flex flex-col">
+                    <textarea 
+                        id="promptInput"
+                        rows="1" 
+                        placeholder="给 Amacis 发送消息..." 
+                        class="w-full bg-transparent text-text placeholder-[#8E918F] px-4 py-3 focus:outline-none resize-none max-h-52 overflow-y-auto no-scrollbar text-base"
+                    ></textarea>
+                    
+                    <div class="flex justify-between items-center px-2 pb-1 pt-1">
+                        <div class="flex items-center gap-1">
+                            <button class="btn-icon" title="上传附件"><i class="fa-solid fa-plus"></i></button>
+                            <button class="btn-icon" title="搜索网络"><i class="fa-solid fa-globe"></i></button>
+                        </div>
+                        
+                        <button id="sendBtn" class="w-10 h-10 rounded-full bg-white text-background flex items-center justify-center transition-all hover:bg-[#E3E3E3] disabled:opacity-30 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-center text-[11px] text-[#8E918F] mt-3">Amacis 可能提供的信息并不准确，请核查重要回复。</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // 1. 侧边栏折叠逻辑 (已修复 Bug)
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // 2. 输入框高度自适应逻辑
+        const textarea = document.getElementById('promptInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const newHeight = Math.min(this.scrollHeight, 208); // 最大高度 208px
+            this.style.height = newHeight + 'px';
+            if(this.value === '') this.style.height = 'auto';
+        });
+
+        // 3. UI 演示脚本 (点击快捷键隐藏欢迎页)
+        document.querySelectorAll('.quick-cmd-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const text = btn.querySelector('.text-sm').innerText;
+                textarea.value = text;
+                textarea.dispatchEvent(new Event('input'));
+                
+                // 演示 UI 切换
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('messageList').classList.remove('hidden');
+            });
+        });
+
+        // 手机端自动适配
+        if (window.innerWidth < 768) {
+            sidebar.classList.add('collapsed');
+        }
+    </script>
+
+</body>
+</html>

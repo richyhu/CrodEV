@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AmacisAI - 极简助手</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- KaTeX支持 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/mhchem.min.js"></script>
+    <!-- highlight.js支持 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#131314', // Gemini 主背景
+                        surface: '#1E1F20',    // 侧边栏/卡片背景
+                        hover: '#2D2E35',      // 悬停交互色
+                        border: '#444746',     // 细微边框
+                        primary: '#A8C7FA',    // Gemini 标志性蓝色
+                        text: '#E3E3E3',       // 主文字
+                        muted: '#9CA3AF',      // 次要文字
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 基础重置 */
+        body {
+            background-color: #131314;
+            color: #E3E3E3;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- 侧边栏 CSS --- */
+        #sidebar {
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: width;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        /* 折叠状态的侧边栏 */
+        #sidebar.collapsed {
+            width: 72px;
+        }
+
+        /* 折叠时隐藏文字 */
+        #sidebar.collapsed .sidebar-text {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        /* --- 消息流 CSS --- */
+        .user-msg-bubble {
+            background-color: #2D2E35;
+            border-radius: 1.5rem;
+            padding: 0.75rem 1.25rem;
+            max-width: 85%;
+        }
+
+        .ai-msg-container {
+            width: 100%;
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Markdown 内容微调 */
+        .prose-custom {
+            line-height: 1.75;
+            color: #E3E3E3;
+        }
+        .prose-custom code {
+            background: #2D2E35;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+
+        /* --- 输入框 CSS --- */
+        .input-pill-container {
+            background-color: #1E1F20;
+            border-radius: 2rem;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .input-pill-container:focus-within {
+            background-color: #282A2C;
+            border-color: #444746;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 按钮动画 */
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+            color: #9CA3AF;
+        }
+        .btn-icon:hover {
+            background-color: #333537;
+            color: #E3E3E3;
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            position: relative;
+            background: #2D2E35;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #25262B;
+            border-bottom: 1px solid #444746;
+        }
+
+        .code-language {
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .copy-button {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: #333537;
+            color: #9CA3AF;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-button:hover {
+            background: #3D3F45;
+            color: #E3E3E3;
+        }
+
+        .copy-button.copied {
+            background: #1A2E22;
+            color: #34D399;
+        }
+
+        .code-content {
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        /* 深度思考标签样式 */
+        .think-tag {
+            background: rgba(168, 199, 250, 0.1);
+            border: 1px solid rgba(168, 199, 250, 0.2);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .think-tag-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #A8C7FA;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .think-tag-content {
+            color: #CBD5E1;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+
+        /* 数学公式样式 */
+        .katex-display {
+            margin: 1rem 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        /* 表格样式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: #25262B;
+            color: #E3E3E3;
+            font-weight: 500;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #444746;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #444746;
+            color: #CBD5E1;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* 打字动画 */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #A8C7FA;
+            animation: typing-bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing-bounce {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="h-screen flex">
+
+    <aside id="sidebar" class="bg-surface border-r border-border h-full w-[280px] flex flex-col z-30 shrink-0">
+        
+        <div class="h-16 flex items-center justify-between px-5 shrink-0">
+            <div class="flex items-center gap-3 sidebar-text overflow-hidden">
+                <div class="w-8 h-8 rounded-lg bg-primary text-background flex items-center justify-center font-bold">A</div>
+                <span class="text-lg font-medium tracking-tight">AmacisAI</span>
+            </div>
+            <button id="sidebarToggle" class="btn-icon">
+                <i class="fa-solid fa-bars-staggered"></i>
+            </button>
+        </div>
+
+        <div class="px-3 mb-6">
+            <button id="newChatButton" class="w-full flex items-center gap-3 bg-hover hover:bg-[#393A41] text-text py-3 px-4 rounded-xl transition-all group overflow-hidden">
+                <i class="fa-solid fa-plus text-primary text-lg shrink-0"></i>
+                <span class="font-medium sidebar-text">新建对话</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-2 no-scrollbar">
+            <div class="px-3 py-2 text-xs font-medium text-muted uppercase sidebar-text tracking-widest">最近记录</div>
+            <div id="historyList" class="space-y-1 mt-2">
+                <!-- 历史记录将通过JavaScript动态添加 -->
+            </div>
+        </div>
+
+        <div class="p-3 border-t border-border">
+            <button id="userMenuTrigger" class="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-hover transition-colors">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 shrink-0"></div>
+                <div class="flex-1 text-left overflow-hidden sidebar-text">
+                    <div id="usernameDisplay" class="text-sm font-medium truncate">访客用户</div>
+                    <div class="text-xs text-muted">Free Plan</div>
+                </div>
+                <i class="fa-solid fa-ellipsis-vertical text-muted sidebar-text"></i>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative min-w-0">
+        
+        <header class="h-16 flex items-center justify-between px-6 shrink-0 z-10">
+            <div class="flex items-center gap-2 group cursor-pointer hover:bg-surface px-3 py-1.5 rounded-lg transition-colors">
+                <span id="currentModel" class="font-medium text-lg text-text">Qwen3-8B</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-muted group-hover:text-text"></i>
+            </div>
+            
+            <div class="flex items-center gap-1">
+                <button id="apiSettingsButton" class="btn-icon" title="API设置">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+                <button id="shareButton" class="btn-icon" title="分享对话">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button id="userProfileButton" class="btn-icon" title="用户资料">
+                    <i class="fa-solid fa-circle-user text-xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="chatBox" class="flex-1 overflow-y-auto no-scrollbar px-4">
+            <div class="max-w-3xl mx-auto pt-10 pb-40">
+                
+                <div id="welcomeScreen" class="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-8 animate-[fadeIn_0.5s_ease-out]">
+                    <div class="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-sparkles text-3xl text-primary"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-4xl font-medium bg-gradient-to-r from-blue-400 via-purple-400 to-red-300 bg-clip-text text-transparent">你好，我是 Amacis</h1>
+                        <p class="text-muted mt-3 text-lg">我今天能帮你写代码、解答疑问或构思创意吗？</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-2xl">
+                        <button class="quick-cmd-btn text-left bg-surface hover:bg-hover p-4 rounded-2xl border border-transparent hover:border-border transition-all">
+                            <i class="fa-solid fa-code text-blue-400 mb-2"></i>
+                            <div class="text-sm font-medium">帮我写一段代码</div>
+                        </button>
+                        <button class="quick-cmd-btn text-left bg-surface hover:bg-hover p-4 rounded-2xl border border-transparent hover:border-border transition-all">
+                            <i class="fa-solid fa-pen-nib text-purple-400 mb-2"></i>
+                            <div class="text-sm font-medium">写一封正式邮件</div>
+                        </button>
+                        <button class="quick-cmd-btn text-left bg-surface hover:bg-hover p-4 rounded-2xl border border-transparent hover:border-border transition-all">
+                            <i class="fa-solid fa-lightbulb text-yellow-400 mb-2"></i>
+                            <div class="text-sm font-medium">给我一些创意灵感</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="messageList" class="space-y-10 hidden">
+                    <!-- 消息将通过JavaScript动态添加 -->
+                </div>
+
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 w-full px-4 pb-6 pt-10 bg-gradient-to-t from-background via-background to-transparent z-20">
+            <div class="max-w-3xl mx-auto">
+                <div class="input-pill-container p-2 flex flex-col">
+                    <textarea 
+                        id="promptInput"
+                        rows="1" 
+                        placeholder="给 Amacis 发送消息..." 
+                        class="w-full bg-transparent text-text placeholder-[#8E918F] px-4 py-3 focus:outline-none resize-none max-h-52 overflow-y-auto no-scrollbar text-base"
+                    ></textarea>
+                    
+                    <div class="flex justify-between items-center px-2 pb-1 pt-1">
+                        <div class="flex items-center gap-1">
+                            <button id="uploadButton" class="btn-icon" title="上传附件">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <button id="searchButton" class="btn-icon" title="搜索网络">
+                                <i class="fa-solid fa-globe"></i>
+                            </button>
+                        </div>
+                        
+                        <button id="sendBtn" class="w-10 h-10 rounded-full bg-white text-background flex items-center justify-center transition-all hover:bg-[#E3E3E3] disabled:opacity-30 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-center text-[11px] text-[#8E918F] mt-3">Amacis 可能提供的信息并不准确，请核查重要回复。</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- API设置模态框 -->
+    <div id="apiSettingsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+        <div class="bg-surface rounded-2xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-text">API 设置</h3>
+                <button id="closeApiSettings" class="btn-icon">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-muted mb-2">选择模型</label>
+                    <select id="apiModelSelect" class="w-full bg-hover border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary">
+                        <optgroup label="🔮 DeepSeek 系列">
+                            <option value="deepseek-chat">DeepSeek Chat</option>
+                            <option value="deepseek-reasoner">DeepSeek Reasoner ⚡</option>
+                        </optgroup>
+                        <optgroup label="🌟 Qwen 系列">
+                            <option value="qwen3-8b" selected>Qwen3-8B</option>
+                            <option value="qwen2.5-7b-instruct">Qwen2.5-7B-Instruct</option>
+                            <option value="qwen2.5-coder-7b-instruct">Qwen2.5-Coder-7B 💻</option>
+                            <option value="qwen2-7b-instruct">Qwen2-7B-Instruct</option>
+                        </optgroup>
+                        <optgroup label="🎯 GLM 系列">
+                            <option value="glm-z1-9b-0414">GLM-Z1-9B ⚡</option>
+                            <option value="glm-4-9b-chat">GLM-4-9B-Chat</option>
+                            <option value="glm-4-9b-0414">GLM-4-9B-0414</option>
+                        </optgroup>
+                        <optgroup label="📚 InternLM 系列">
+                            <option value="internlm2_5-7b-chat">InternLM2.5-7B-Chat</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-muted mb-2">API Key</label>
+                    <div class="relative">
+                        <input type="text" id="apiKeyInput" placeholder="输入API Key" class="w-full bg-hover border border-border rounded-xl px-4 py-3 pr-12 text-text focus:outline-none focus:border-primary font-mono text-sm">
+                        <button id="toggleApiKey" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-text">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button id="saveApiKey" class="btn-primary flex-1 py-3 px-6 rounded-xl font-medium bg-primary text-background hover:bg-primary/90 transition-colors">
+                        <i class="fa-solid fa-save mr-2"></i>保存
+                    </button>
+                    <button id="resetApiKey" class="btn-secondary flex-1 py-3 px-6 rounded-xl font-medium bg-hover text-text hover:bg-[#393A41] transition-colors">
+                        <i class="fa-solid fa-undo mr-2"></i>恢复默认
+                    </button>
+                </div>
+                <p id="apiKeyStatus" class="text-sm hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户菜单模态框 -->
+    <div id="userMenuModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+        <div class="bg-surface rounded-2xl p-6 max-w-sm w-full mx-4">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 mx-auto mb-4 flex items-center justify-center">
+                    <i class="fa-solid fa-user text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-text mb-1">访客用户</h3>
+                <p class="text-muted text-sm">Free Plan</p>
+            </div>
+            <div class="space-y-2">
+                <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-hover text-text transition-colors">
+                    <i class="fa-solid fa-user-cog text-muted w-5 text-center"></i>
+                    <span>账户设置</span>
+                </button>
+                <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-hover text-text transition-colors">
+                    <i class="fa-solid fa-history text-muted w-5 text-center"></i>
+                    <span>历史记录</span>
+                </button>
+                <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-hover text-text transition-colors">
+                    <i class="fa-solid fa-question-circle text-muted w-5 text-center"></i>
+                    <span>帮助中心</span>
+                </button>
+                <div class="border-t border-border my-2"></div>
+                <button id="logoutButton" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-hover text-red-400 transition-colors">
+                    <i class="fa-solid fa-sign-out-alt w-5 text-center"></i>
+                    <span>登出账户</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let chatHistory = [];
+        let currentModel = 'qwen3-8b';
+        let apiKeys = JSON.parse(localStorage.getItem('apiKeys')) || {};
+        let isGenerating = false;
+
+        // DOM元素
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const textarea = document.getElementById('promptInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const messageList = document.getElementById('messageList');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const quickCmdBtns = document.querySelectorAll('.quick-cmd-btn');
+        const historyList = document.getElementById('historyList');
+        const currentModelSpan = document.getElementById('currentModel');
+        const apiSettingsButton = document.getElementById('apiSettingsButton');
+        const apiSettingsModal = document.getElementById('apiSettingsModal');
+        const closeApiSettings = document.getElementById('closeApiSettings');
+        const apiModelSelect = document.getElementById('apiModelSelect');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const toggleApiKey = document.getElementById('toggleApiKey');
+        const saveApiKey = document.getElementById('saveApiKey');
+        const resetApiKey = document.getElementById('resetApiKey');
+        const apiKeyStatus = document.getElementById('apiKeyStatus');
+        const userProfileButton = document.getElementById('userProfileButton');
+        const userMenuModal = document.getElementById('userMenuModal');
+        const logoutButton = document.getElementById('logoutButton');
+        const newChatButton = document.getElementById('newChatButton');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化highlight.js
+            hljs.highlightAll();
+            
+            // 加载历史记录
+            loadHistory();
+            
+            // 加载API密钥
+            loadApiKeys();
+            
+            // 设置当前模型
+            updateCurrentModel();
+        });
+
+        // 侧边栏折叠逻辑
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // 输入框高度自适应逻辑
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const newHeight = Math.min(this.scrollHeight, 208); // 最大高度 208px
+            this.style.height = newHeight + 'px';
+            if(this.value === '') this.style.height = 'auto';
+        });
+
+        // 发送消息
+        function sendMessage() {
+            const prompt = textarea.value.trim();
+            if (!prompt || isGenerating) return;
+
+            // 清空输入框
+            textarea.value = '';
+            textarea.style.height = 'auto';
+
+            // 显示消息列表，隐藏欢迎屏幕
+            if (welcomeScreen.style.display !== 'none') {
+                welcomeScreen.style.display = 'none';
+                messageList.classList.remove('hidden');
+            }
+
+            // 添加用户消息
+            addUserMessage(prompt);
+
+            // 显示AI正在输入
+            showTypingIndicator();
+
+            // 生成AI回复
+            generateResponse(prompt);
+        }
+
+        // 添加用户消息
+        function addUserMessage(content) {
+            const messageId = Date.now();
+            const message = {
+                id: messageId,
+                role: 'user',
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+
+            chatHistory.push(message);
+
+            const messageElement = document.createElement('div');
+            messageElement.className = 'flex justify-end mb-6';
+            messageElement.innerHTML = `
+                <div class="user-msg-bubble">
+                    ${escapeHtml(content)}
+                </div>
+            `;
+
+            messageList.appendChild(messageElement);
+            scrollToBottom();
+
+            // 保存历史记录
+            saveHistory();
+        }
+
+        // 添加AI消息
+        function addAIMessage(content, thinking = '') {
+            const messageId = Date.now();
+            const message = {
+                id: messageId,
+                role: 'assistant',
+                content: content,
+                thinking: thinking,
+                timestamp: new Date().toISOString()
+            };
+
+            chatHistory.push(message);
+
+            const messageElement = document.createElement('div');
+            messageElement.className = 'ai-msg-container mb-6';
+            
+            let thinkingHtml = '';
+            if (thinking) {
+                thinkingHtml = `
+                    <div class="think-tag w-full">
+                        <div class="think-tag-header">
+                            <i class="fa-solid fa-brain"></i>
+                            <span>深度思考</span>
+                        </div>
+                        <div class="think-tag-content">
+                            ${escapeHtml(thinking)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            messageElement.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-white text-background flex items-center justify-center shrink-0 mt-1">
+                    <i class="fa-solid fa-robot text-xs"></i>
+                </div>
+                <div class="flex-1">
+                    ${thinkingHtml}
+                    <div class="prose-custom">
+                        ${parseMarkdown(content)}
+                    </div>
+                </div>
+            `;
+
+            messageList.appendChild(messageElement);
+            scrollToBottom();
+
+            // 保存历史记录
+            saveHistory();
+
+            // 渲染数学公式
+            renderMathInElement(messageElement, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ]
+            });
+
+            // 高亮代码块
+            messageElement.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+
+            // 添加代码复制功能
+            addCopyButtons(messageElement);
+        }
+
+        // 显示AI正在输入
+        function showTypingIndicator() {
+            const typingElement = document.createElement('div');
+            typingElement.id = 'typingIndicator';
+            typingElement.className = 'ai-msg-container mb-6';
+            typingElement.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-white text-background flex items-center justify-center shrink-0 mt-1">
+                    <i class="fa-solid fa-robot text-xs"></i>
+                </div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+
+            messageList.appendChild(typingElement);
+            scrollToBottom();
+            isGenerating = true;
+            sendBtn.disabled = true;
+        }
+
+        // 隐藏AI正在输入
+        function hideTypingIndicator() {
+            const typingElement = document.getElementById('typingIndicator');
+            if (typingElement) {
+                typingElement.remove();
+            }
+            isGenerating = false;
+            sendBtn.disabled = false;
+        }
+
+        // 生成AI回复
+        function generateResponse(prompt) {
+            // 构建消息历史
+            const messages = chatHistory.slice(-20).map(msg => ({
+                role: msg.role,
+                content: msg.content
+            }));
+
+            // 添加系统提示词
+            messages.unshift({
+                role: 'system',
+                content: '你是Amacis AI，一个智能助手。请用自然、友好的语言回答用户问题。对于复杂问题，先进行深度思考，然后给出详细解答。'
+            });
+
+            // 模拟API调用延迟
+            setTimeout(() => {
+                hideTypingIndicator();
+                
+                // 模拟不同类型的回复
+                let response, thinking;
+                
+                if (prompt.includes('代码') || prompt.includes('编程')) {
+                    thinking = '用户需要代码帮助，我需要提供清晰的代码示例和解释。';
+                    response = `我可以帮你写一段代码。以下是一个简单的Python示例：
+
+\`\`\`python
+def hello_world(name):
+    \"\"\"
+    一个简单的问候函数
+    参数:
+        name (str): 用户名
+    返回:
+        str: 问候语
+    \"\"\"
+    return f"Hello, {name}! Welcome to Amacis AI."
+
+# 使用示例
+if __name__ == "__main__":
+    user_name = input("请输入你的名字: ")
+    greeting = hello_world(user_name)
+    print(greeting)
+\`\`\`
+
+这个代码演示了一个简单的问候函数，包括文档字符串和基本的输入输出操作。你可以根据需要修改或扩展这个示例。`;
+                } else if (prompt.includes('邮件')) {
+                    thinking = '用户需要写邮件，我需要提供一个正式但友好的邮件模板。';
+                    response = `以下是一封正式邮件的模板：
+
+**主题：** [邮件主题]
+
+尊敬的[收件人姓名]：
+
+您好！
+
+[正文内容，说明邮件目的和相关信息]
+
+如果您有任何问题或需要进一步讨论，请随时与我联系。
+
+此致
+敬礼
+
+[您的姓名]
+[您的职位]
+[联系方式]
+[日期]`;
+                } else if (prompt.includes('创意') || prompt.includes('灵感')) {
+                    thinking = '用户需要创意灵感，我需要提供一些创新的想法和建议。';
+                    response = `以下是一些创意灵感：
+
+1. **结合艺术与科技**：创建一个交互式艺术装置，使用投影映射和传感器让观众参与创作过程。
+
+2. **可持续生活方式**：设计一个智能家居系统，优化能源使用并减少碳足迹。
+
+3. **教育创新**：开发一个沉浸式学习平台，使用虚拟现实技术让学生身临其境地学习历史事件。
+
+4. **社区建设**：组织一个本地创意工作坊，让不同背景的人合作解决社区问题。
+
+5. **健康科技**：创建一个结合AI的健康追踪应用，提供个性化的健身和营养建议。
+
+这些只是一些起点，你可以根据自己的兴趣和目标进一步发展这些想法。`;
+                } else {
+                    thinking = '用户提出了一个一般性问题，我需要提供全面而有见地的回答。';
+                    response = `感谢您的提问！我很高兴能为您提供帮助。
+
+您可以询问我关于以下方面的问题：
+- 编程和代码相关问题
+- 学术知识和解释
+- 创意写作和内容创作
+- 日常问题和建议
+- 数据分析和可视化
+- 语言翻译和学习
+
+如果您有具体的问题，请告诉我，我会尽力提供详细的解答。您也可以尝试使用上方的快捷命令来快速开始对话。`;
+                }
+
+                addAIMessage(response, thinking);
+            }, 2000);
+        }
+
+        // 解析Markdown
+        function parseMarkdown(text) {
+            // 代码块
+            text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, language, code) {
+                const lang = language || 'text';
+                return `
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-language">${lang}</span>
+                            <button class="copy-button" onclick="copyCode(this)">
+                                <i class="fa-solid fa-copy"></i>
+                                <span>复制</span>
+                            </button>
+                        </div>
+                        <div class="code-content">
+                            <pre><code class="language-${lang}">${escapeHtml(code)}</code></pre>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 行内代码
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // 标题
+            text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+            text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+            text = text.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+
+            // 粗体
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            // 斜体
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+            // 链接
+            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+            // 列表
+            text = text.replace(/^\s*\*\s(.*$)/gm, '<li>$1</li>');
+            if (text.includes('<li>')) {
+                text = text.replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>');
+            }
+
+            // 段落
+            text = text.replace(/^(?!<[a-z])/gm, function(match, offset, string) {
+                if (offset > 0 && string[offset - 1] === '\n') {
+                    return '<p>';
+                }
+                return match;
+            });
+            text = text.replace(/(?<!<\/[a-z])$/gm, '</p>');
+
+            return text;
+        }
+
+        // 复制代码
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('code').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fa-solid fa-check"></i><span>已复制</span>';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 添加复制按钮到代码块
+        function addCopyButtons(container) {
+            container.querySelectorAll('.code-block .copy-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    copyCode(this);
+                });
+            });
+        }
+
+        // 转义HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 保存历史记录
+        function saveHistory() {
+            const history = chatHistory.map(msg => ({
+                id: msg.id,
+                role: msg.role,
+                content: msg.content,
+                timestamp: msg.timestamp
+            }));
+            
+            localStorage.setItem('chatHistory', JSON.stringify(history));
+            
+            // 更新历史记录列表
+            updateHistoryList();
+        }
+
+        // 加载历史记录
+        function loadHistory() {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
+                chatHistory = JSON.parse(savedHistory);
+                
+                // 如果有历史记录，显示消息列表
+                if (chatHistory.length > 0) {
+                    welcomeScreen.style.display = 'none';
+                    messageList.classList.remove('hidden');
+                    
+                    // 重新渲染消息
+                    messageList.innerHTML = '';
+                    chatHistory.forEach(msg => {
+                        if (msg.role === 'user') {
+                            const messageElement = document.createElement('div');
+                            messageElement.className = 'flex justify-end mb-6';
+                            messageElement.innerHTML = `
+                                <div class="user-msg-bubble">
+                                    ${escapeHtml(msg.content)}
+                                </div>
+                            `;
+                            messageList.appendChild(messageElement);
+                        } else if (msg.role === 'assistant') {
+                            const messageElement = document.createElement('div');
+                            messageElement.className = 'ai-msg-container mb-6';
+                            
+                            let thinkingHtml = '';
+                            if (msg.thinking) {
+                                thinkingHtml = `
+                                    <div class="think-tag w-full">
+                                        <div class="think-tag-header">
+                                            <i class="fa-solid fa-brain"></i>
+                                            <span>深度思考</span>
+                                        </div>
+                                        <div class="think-tag-content">
+                                            ${escapeHtml(msg.thinking)}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            messageElement.innerHTML = `
+                                <div class="w-8 h-8 rounded-full bg-white text-background flex items-center justify-center shrink-0 mt-1">
+                                    <i class="fa-solid fa-robot text-xs"></i>
+                                </div>
+                                <div class="flex-1">
+                                    ${thinkingHtml}
+                                    <div class="prose-custom">
+                                        ${parseMarkdown(msg.content)}
+                                    </div>
+                                </div>
+                            `;
+                            messageList.appendChild(messageElement);
+                            
+                            // 渲染数学公式
+                            renderMathInElement(messageElement, {
+                                delimiters: [
+                                    {left: "$$", right: "$$", display: true},
+                                    {left: "$", right: "$", display: false}
+                                ]
+                            });
+
+                            // 高亮代码块
+                            messageElement.querySelectorAll('pre code').forEach((block) => {
+                                hljs.highlightElement(block);
+                            });
+
+                            // 添加代码复制功能
+                            addCopyButtons(messageElement);
+                        }
+                    });
+                    
+                    scrollToBottom();
+                }
+            }
+            
+            // 更新历史记录列表
+            updateHistoryList();
+        }
+
+        // 更新历史记录列表
+        function updateHistoryList() {
+            historyList.innerHTML = '';
+            
+            // 获取最近的对话
+            const recentConversations = [];
+            let currentConversation = [];
+            
+            for (let i = chatHistory.length - 1; i >= 0; i--) {
+                const msg = chatHistory[i];
+                currentConversation.unshift(msg);
+                
+                // 如果是用户消息且不是第一条消息，或者是第一条消息
+                if ((msg.role === 'user' && i > 0) || i === 0) {
+                    if (currentConversation.length > 0) {
+                        recentConversations.push({
+                            id: msg.id,
+                            title: msg.content.substring(0, 30) + (msg.content.length > 30 ? '...' : ''),
+                            timestamp: msg.timestamp
+                        });
+                        currentConversation = [];
+                    }
+                }
+                
+                // 最多显示5条记录
+                if (recentConversations.length >= 5) {
+                    break;
+                }
+            }
+            
+            // 添加到历史记录列表
+            recentConversations.forEach(convo => {
+                const item = document.createElement('button');
+                item.className = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-hover text-left transition-colors group';
+                item.innerHTML = `
+                    <i class="fa-regular fa-comment text-muted group-hover:text-text"></i>
+                    <span class="truncate text-sm text-text sidebar-text">${escapeHtml(convo.title)}</span>
+                `;
+                item.addEventListener('click', () => {
+                    // 加载该对话
+                    loadConversation(convo.id);
+                });
+                historyList.appendChild(item);
+            });
+            
+            // 如果没有历史记录，显示提示
+            if (recentConversations.length === 0) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'px-3 py-4 text-center text-muted text-sm sidebar-text';
+                emptyItem.textContent = '暂无对话记录';
+                historyList.appendChild(emptyItem);
+            }
+        }
+
+        // 加载特定对话
+        function loadConversation(startId) {
+            // 找到该对话的起始位置
+            const startIndex = chatHistory.findIndex(msg => msg.id === startId);
+            if (startIndex === -1) return;
+            
+            // 加载该对话及其之后的所有消息
+            const conversationHistory = chatHistory.slice(startIndex);
+            
+            // 清空当前消息列表
+            messageList.innerHTML = '';
+            
+            // 重新渲染消息
+            conversationHistory.forEach(msg => {
+                if (msg.role === 'user') {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'flex justify-end mb-6';
+                    messageElement.innerHTML = `
+                        <div class="user-msg-bubble">
+                            ${escapeHtml(msg.content)}
+                        </div>
+                    `;
+                    messageList.appendChild(messageElement);
+                } else if (msg.role === 'assistant') {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'ai-msg-container mb-6';
+                    
+                    let thinkingHtml = '';
+                    if (msg.thinking) {
+                        thinkingHtml = `
+                            <div class="think-tag w-full">
+                                <div class="think-tag-header">
+                                    <i class="fa-solid fa-brain"></i>
+                                    <span>深度思考</span>
+                                </div>
+                                <div class="think-tag-content">
+                                    ${escapeHtml(msg.thinking)}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    messageElement.innerHTML = `
+                        <div class="w-8 h-8 rounded-full bg-white text-background flex items-center justify-center shrink-0 mt-1">
+                            <i class="fa-solid fa-robot text-xs"></i>
+                        </div>
+                        <div class="flex-1">
+                            ${thinkingHtml}
+                            <div class="prose-custom">
+                                ${parseMarkdown(msg.content)}
+                            </div>
+                        </div>
+                    `;
+                    messageList.appendChild(messageElement);
+                    
+                    // 渲染数学公式
+                    renderMathInElement(messageElement, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false}
+                        ]
+                    });
+
+                    // 高亮代码块
+                    messageElement.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+
+                    // 添加代码复制功能
+                    addCopyButtons(messageElement);
+                }
+            });
+            
+            // 显示消息列表，隐藏欢迎屏幕
+            welcomeScreen.style.display = 'none';
+            messageList.classList.remove('hidden');
+            
+            scrollToBottom();
+        }
+
+        // 保存API密钥
+        function saveApiKeys() {
+            localStorage.setItem('apiKeys', JSON.stringify(apiKeys));
+        }
+
+        // 加载API密钥
+        function loadApiKeys() {
+            const savedKeys = localStorage.getItem('apiKeys');
+            if (savedKeys) {
+                apiKeys = JSON.parse(savedKeys);
+            }
+        }
+
+        // 更新当前模型显示
+        function updateCurrentModel() {
+            const modelNames = {
+                'deepseek-chat': 'DeepSeek Chat',
+                'deepseek-reasoner': 'DeepSeek Reasoner',
+                'qwen3-8b': 'Qwen3-8B',
+                'qwen2.5-7b-instruct': 'Qwen2.5-7B',
+                'qwen2.5-coder-7b-instruct': 'Qwen2.5-Coder',
+                'qwen2-7b-instruct': 'Qwen2-7B',
+                'glm-z1-9b-0414': 'GLM-Z1-9B',
+                'glm-4-9b-chat': 'GLM-4-9B',
+                'glm-4-9b-0414': 'GLM-4-9B-0414',
+                'internlm2_5-7b-chat': 'InternLM2.5-7B'
+            };
+            
+            currentModelSpan.textContent = modelNames[currentModel] || currentModel;
+        }
+
+        // 事件监听器
+        sendBtn.addEventListener('click', sendMessage);
+        
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        quickCmdBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const text = btn.querySelector('.text-sm').innerText;
+                textarea.value = text;
+                textarea.dispatchEvent(new Event('input'));
+                sendMessage();
+            });
+        });
+        
+        // API设置模态框
+        apiSettingsButton.addEventListener('click', () => {
+            apiSettingsModal.classList.remove('hidden');
+            apiSettingsModal.classList.add('flex');
+            apiModelSelect.value = currentModel;
+            
+            // 显示当前模型的API密钥
+            if (apiKeys[currentModel]) {
+                apiKeyInput.value = apiKeys[currentModel];
+            } else {
+                apiKeyInput.value = '';
+            }
+        });
+        
+        closeApiSettings.addEventListener('click', () => {
+            apiSettingsModal.classList.add('hidden');
+            apiSettingsModal.classList.remove('flex');
+        });
+        
+        toggleApiKey.addEventListener('click', () => {
+            const type = apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            apiKeyInput.setAttribute('type', type);
+            toggleApiKey.innerHTML = type === 'password' ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+        });
+        
+        saveApiKey.addEventListener('click', () => {
+            const model = apiModelSelect.value;
+            const key = apiKeyInput.value.trim();
+            
+            if (key) {
+                apiKeys[model] = key;
+                saveApiKeys();
+                
+                // 显示成功消息
+                apiKeyStatus.textContent = 'API密钥已保存';
+                apiKeyStatus.className = 'text-sm text-green-400';
+                apiKeyStatus.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    apiKeyStatus.classList.add('hidden');
+                }, 3000);
+            }
+        });
+        
+        resetApiKey.addEventListener('click', () => {
+            const model = apiModelSelect.value;
+            delete apiKeys[model];
+            saveApiKeys();
+            apiKeyInput.value = '';
+            
+            // 显示成功消息
+            apiKeyStatus.textContent = '已恢复默认设置';
+            apiKeyStatus.className = 'text-sm text-green-400';
+            apiKeyStatus.classList.remove('hidden');
+            
+            setTimeout(() => {
+                apiKeyStatus.classList.add('hidden');
+            }, 3000);
+        });
+        
+        // 用户菜单模态框
+        userProfileButton.addEventListener('click', () => {
+            userMenuModal.classList.remove('hidden');
+            userMenuModal.classList.add('flex');
+        });
+        
+        userMenuModal.addEventListener('click', (e) => {
+            if (e.target === userMenuModal) {
+                userMenuModal.classList.add('hidden');
+                userMenuModal.classList.remove('flex');
+            }
+        });
+        
+        logoutButton.addEventListener('click', () => {
+            // 清除所有数据
+            localStorage.clear();
+            chatHistory = [];
+            apiKeys = {};
+            
+            // 重新加载页面
+            window.location.reload();
+        });
+        
+        // 新建对话
+        newChatButton.addEventListener('click', () => {
+            // 清空聊天历史
+            chatHistory = [];
+            messageList.innerHTML = '';
+            
+            // 显示欢迎屏幕
+            welcomeScreen.style.display = 'flex';
+            messageList.classList.add('hidden');
+            
+            // 清空历史记录
+            saveHistory();
+        });
+        
+        // 点击模态框背景关闭模态框
+        apiSettingsModal.addEventListener('click', (e) => {
+            if (e.target === apiSettingsModal) {
+                apiSettingsModal.classList.add('hidden');
+                apiSettingsModal.classList.remove('flex');
+            }
+        });
+        
+        // 手机端自动适配
+        if (window.innerWidth < 768) {
+            sidebar.classList.add('collapsed');
+        }
+    </script>
+
+</body>
+</html>
