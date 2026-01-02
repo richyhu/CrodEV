@@ -188,7 +188,7 @@ CrodEV/
 ## 📞 联系方式
 
 - **GitHub**：[richyhu/CrodEV](https://github.com/richyhu/CrodEV)
-- **邮箱**：[your-email@example.com](mailto:your-email@example.com)
+- **邮箱**：[your-email@example.com](mailto:richy8221@outlook.comm
 
 ## 🙏 致谢
 
